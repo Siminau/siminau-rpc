@@ -1,0 +1,9 @@
+# General
+/target/
+**/*.rs.bk
+Cargo.lock
+/tags
+*.json
+
+# Ignore vim swap files
+*.swp
