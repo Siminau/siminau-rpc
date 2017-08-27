@@ -25,7 +25,7 @@
 // ===========================================================================
 // Externs
 // ===========================================================================
-
+#![recursion_limit = "1024"]
 
 // Stdlib externs
 
@@ -94,9 +94,9 @@ pub mod error {
                 display("Invalid request message")
             }
 
-            InvalidRequestType {
-                description("Invalid request type")
-                display("Invalid request type")
+            InvalidRequestMethod(m: String) {
+                description("Invalid request method")
+                display("Invalid request method: {}", m)
             }
 
             InvalidResponse {
@@ -104,9 +104,9 @@ pub mod error {
                 display("Invalid response message")
             }
 
-            InvalidResponseType {
-                description("Invalid response type")
-                display("Invalid response type")
+            InvalidResponseError {
+                description("Invalid response error")
+                display("Invalid response error")
             }
 
             InvalidNotification {
@@ -119,9 +119,9 @@ pub mod error {
                 display("Invalid notification type")
             }
 
-            InvalidRequestArgs {
+            InvalidRequestArgs(m: String) {
                 description("Invalid request arguments")
-                display("Invalid request arguments")
+                display("Invalid request arguments: {}", m)
             }
 
             InvalidNotificationArgs {
@@ -134,9 +134,6 @@ pub mod error {
 
 
 pub mod message;
-// pub mod notify;
-// pub mod request;
-// pub mod response;
 
 
 // ===========================================================================
@@ -151,16 +148,18 @@ pub use self::message::MessageType;
 // Types
 
 pub use self::message::Message;
-// pub use self::notify::NotificationMessage;
-// pub use self::request::RequestMessage;
-// pub use self::response::ResponseMessage;
+// pub use self::message::notify::NotificationMessage;
+
+pub use self::message::request::RequestMessage;
+// pub use self::message::response::ResponseMessage;
 
 // Traits
 
 pub use self::message::{CodeConvert, RpcMessage, RpcMessageType};
-// pub use self::notify::RpcNotice;
-// pub use self::request::RpcRequest;
-// pub use self::response::RpcResponse;
+// pub use self::message::notify::RpcNotice;
+
+pub use self::message::request::RpcRequest;
+// pub use self::message::response::RpcResponse;
 
 
 // ===========================================================================

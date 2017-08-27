@@ -6,7 +6,7 @@
 // ===========================================================================
 // Externs
 // ===========================================================================
-
+#![recursion_limit="1024"]
 
 // Stdlib externs
 extern crate proc_macro;
@@ -89,11 +89,13 @@ impl<'a> ToPrimitive for Literal<'a> {
 fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>,
                 int_type: syn::Ident, maxnum: u64) -> quote::Tokens {
     quote! {
-        impl CodeConvert<#name, #int_type> for #name {
+        impl CodeConvert<#name> for #name {
+            type int_type = #int_type;
+
             fn from_number(num: #int_type) -> RpcResult<#name> {
                 match num as u64 {
                     #(#cases),* ,
-                    _ => bail!(RpcErrorKind::ValueError(num.to_string()))
+                    _ => Err(RpcErrorKind::ValueError(num.to_string()).into())
                 }
             }
 
@@ -101,8 +103,21 @@ fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>,
                 self.clone() as #int_type
             }
 
-            fn max_number() -> #int_type {
-                #maxnum as #int_type
+            fn to_u64(&self) -> u64 {
+                self.clone() as u64
+            }
+
+            fn max_number() -> u64 {
+                #maxnum
+            }
+
+            fn cast_number(n: u64) -> Option<#int_type> {
+                let maxval = #int_type::max_value() as u64;
+                if n <= maxval {
+                    Some(n as #int_type)
+                } else {
+                    None
+                }
             }
         }
     }

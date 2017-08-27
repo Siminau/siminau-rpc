@@ -26,6 +26,6 @@ git = "https://github.com/rust-lang-nursery/error-chain"
 tag = "0.11.0-rc.2"
 
 [dev-dependencies]
-tempdir = "0.3.5"
-chrono = "0.3"
+# tempdir = "0.3.5"
+# chrono = "0.3"
 quickcheck = "0.4"

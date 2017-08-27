@@ -1,4 +1,4 @@
-// src/message.rs
+// src/message/mod.rs
 // Copyright (C) 2017 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
@@ -115,6 +115,14 @@
 
 
 // ===========================================================================
+// Modules
+// ===========================================================================
+
+
+pub mod request;
+
+
+// ===========================================================================
 // Imports
 // ===========================================================================
 
@@ -163,7 +171,7 @@ pub fn value_type(arg: &Value) -> String
 /// If the value is either None or a value that cannot fit into the type
 /// specified by `expected`, then the RpcErrorKind::TypeError error
 /// is returned.
-fn check_int(val: Option<u64>, max_value: u64, expected: String)
+pub fn check_int(val: Option<u64>, max_value: u64, expected: String)
     -> RpcResult<u64>
 {
     match val {
@@ -205,19 +213,28 @@ fn check_int(val: Option<u64>, max_value: u64, expected: String)
 /// This trait assumes the following of the implementing enum:
 ///
 /// 1. The enum is a C-style enum
+/// 2. The enum's values are unsigned integers
 /// 3. The enum's values are continuous without any gaps ie 0, 1, 2 are valid
 ///    values but 0, 2, 4 is not
 ///
 /// [`CodeConvert`]: trait.CodeConvert.html
-pub trait CodeConvert<T, N>: Clone + PartialEq {
+pub trait CodeConvert<T>: Clone + PartialEq {
+    type int_type;
+
     /// Convert a number to type T.
-    fn from_number(num: N) -> RpcResult<T>;
+    fn from_number(num: Self::int_type) -> RpcResult<T>;
 
     /// Convert type To to a number.
-    fn to_number(&self) -> N;
+    fn to_number(&self) -> Self::int_type;
+
+    /// Convert type To to a u64.
+    fn to_u64(&self) -> u64;
 
     /// Return the maximum number value
-    fn max_number() -> N;
+    fn max_number() -> u64;
+
+    /// Cast a u64 number into acceptable int type
+    fn cast_number(n: u64) -> Option<Self::int_type>;
 }
 
 
@@ -260,8 +277,10 @@ pub trait RpcMessage {
             Some(v) => v as u8,
             None => unreachable!(),
         };
-        MessageType::from_number(msgtype)
-            .expect(&format!("bad msgtype? {}", msgtype))
+        MessageType::from_number(msgtype).expect(&format!(
+            "bad msgtype? {}",
+            msgtype
+        ))
     }
 
     /// Return the string name of an [`rmpv::Value`] object.
@@ -360,7 +379,8 @@ impl Clone for Message {
 
 
 impl From<Message> for Value {
-    fn from(msg: Message) -> Value {
+    fn from(msg: Message) -> Value
+    {
         msg.msg
     }
 }
