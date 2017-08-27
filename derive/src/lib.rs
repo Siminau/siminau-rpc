@@ -86,11 +86,30 @@ impl<'a> ToPrimitive for Literal<'a> {
 }
 
 
+fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>, int_type: syn::Ident) -> quote::Tokens {
+    quote! {
+        impl CodeConvert<#name, #int_type> for #name {
+            fn from_number(num: #int_type) -> RpcResult<#name> {
+                match num as u64 {
+                    #(#cases),* ,
+                    _ => bail!(RpcErrorKind::ValueError(num.to_string()))
+                }
+            }
+
+            fn to_number(&self) -> #int_type {
+                self.clone() as #int_type
+            }
+        }
+    }
+}
+
+
 fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
     if let syn::Body::Enum(ref body) = ast.body {
 
         let name = &ast.ident;
         let mut num = 0;
+        let mut maxnum: u64 = 0;
         let cases: Vec<_> = body.iter().map(|case| {
             // Panic if the variant is a struct or tuple
             if let syn::VariantData::Unit = case.data {
@@ -102,9 +121,9 @@ fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
                 if let Some(ref d) = case.discriminant {
                     if let &syn::ConstExpr::Lit(ref l) = d {
                         let lit = Literal::from(l);
-                        num = match lit.to_u32() {
+                        num = match lit.to_u64() {
                             None =>  panic!("#[derive(CodeConvert)] only \
-                                             supports mapping to u32"),
+                                             supports mapping to u64"),
                             Some(v) => v
                         };
                     } else {
@@ -113,6 +132,9 @@ fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
                 }
                 let ret = quote! { #num => Ok(#ident) };
                 num += 1;
+                if num > maxnum {
+                    maxnum = num;
+                }
                 ret
             } else {
                 panic!("#[derive(CodeConvert)] currently does not support \
@@ -120,20 +142,19 @@ fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
             }
         }).collect();
 
-        quote! {
-            impl CodeConvert<#name> for #name {
-                fn from_number(num: u32) -> RpcResult<#name> {
-                    match num {
-                        #(#cases),* ,
-                        _ => bail!(RpcErrorKind::ValueError(num.to_string()))
-                    }
-                }
-
-                fn to_number(&self) -> u32 {
-                    self.clone() as u32
-                }
-            }
-        }
+        let u32_max = u32::max_value() as u64;
+        let u16_max = u16::max_value() as u64;
+        let u8_max = u8::max_value() as u64;
+        let int_type = if maxnum > u32_max {
+            syn::Ident::from("u64")
+        } else if maxnum > u16_max {
+            syn::Ident::from("u32")
+        } else if maxnum > u8_max {
+            syn::Ident::from("u16")
+        } else {
+            syn::Ident::from("u8")
+        };
+        mk_code_impl(name, &cases, int_type)
     } else {
         panic!("#[derive(CodeConvert)] is only defined for enums not structs");
     }

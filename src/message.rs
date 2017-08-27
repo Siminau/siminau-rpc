@@ -168,12 +168,12 @@ pub fn value_type(arg: &Value) -> String
 /// different codes.
 ///
 /// [`CodeConvert`]: trait.CodeConvert.html
-pub trait CodeConvert<T>: Clone + PartialEq {
+pub trait CodeConvert<T, N>: Clone + PartialEq {
     /// Convert a number to type T.
-    fn from_number(num: u32) -> RpcResult<T>;
+    fn from_number(num: N) -> RpcResult<T>;
 
     /// Convert type To to a number.
-    fn to_number(&self) -> u32;
+    fn to_number(&self) -> N;
 }
 
 
@@ -218,8 +218,8 @@ pub trait RpcMessage {
     /// error is returned.
     fn message_type(&self) -> RpcResult<MessageType>
     {
-        let msgtype: u32 = match self.as_vec()[0].as_u64() {
-            Some(v) => v as u32,
+        let msgtype: u8 = match self.as_vec()[0].as_u64() {
+            Some(v) => v as u8,
             None => unreachable!(),
         };
         match MessageType::from_number(msgtype) {
@@ -406,20 +406,20 @@ mod tests {
     // --------------------
     // MessageType::from_number
     quickcheck! {
-        // MessageType::from_number's Ok value when casted as u32 is equal to
-        // u32 input value
-        fn messagetype_from_number_variant_u32_matches_number(xs: u32) -> TestResult {
+        // MessageType::from_number's Ok value when casted as u8 is equal to
+        // u8 input value
+        fn messagetype_from_number_variant_u8_matches_number(xs: u8) -> TestResult {
             match MessageType::from_number(xs) {
                 Err(_) => TestResult::discard(),
                 Ok(code) => {
-                    TestResult::from_bool(code as u32 == xs)
+                    TestResult::from_bool(code as u8 == xs)
                 }
             }
         }
 
         // MessageType::from_number returns error if input value is >= the number
         // of variants
-        fn messagetype_from_number_invalid_number(xs: u32) -> TestResult {
+        fn messagetype_from_number_invalid_number(xs: u8) -> TestResult {
             if xs < 3 {
                 return TestResult::discard()
             }
@@ -435,13 +435,12 @@ mod tests {
                 Ok(_) => TestResult::from_bool(false)
             }
         }
-
     }
 
     // MessageType::to_number
     quickcheck! {
         // MessageType::to_number always returns an integer < 3
-        fn messagetype_to_number_lt_3(xs: u32) -> TestResult {
+        fn messagetype_to_number_lt_3(xs: u8) -> TestResult {
             if xs > 2 {
                 return TestResult::discard()
             }
@@ -451,7 +450,7 @@ mod tests {
 
         // MessageType::to_number return value converted back to MessageType ==
         // original MessageType value
-        fn messagetype_to_number_from_number(xs: u32) -> TestResult {
+        fn messagetype_to_number_from_number(xs: u8) -> TestResult {
             if xs > 2 {
                 return TestResult::discard()
             }
@@ -467,7 +466,7 @@ mod tests {
     // --------------------
 
     // Helper
-    fn mkmessage(msgtype: u32) -> Message
+    fn mkmessage(msgtype: u8) -> Message
     {
         let msgtype = Value::from(msgtype);
         let msgid = Value::from(0);
@@ -482,9 +481,9 @@ mod tests {
     quickcheck! {
         // val == None always returns an err with given marker
         fn message_check_int_none_val(xs: u64) -> bool {
-            let errmsg = "expected u32 but got None";
+            let errmsg = "expected u8 but got None";
             let expected = format!("Invalid type: {}", errmsg);
-            if let Err(e) = Message::check_int(None, xs, String::from("u32")) {
+            if let Err(e) = Message::check_int(None, xs, String::from("u8")) {
                 let res = match e.kind() {
                     &RpcErrorKind::TypeError(ref msg) => msg == &errmsg,
                     _ => false
@@ -534,7 +533,7 @@ mod tests {
     // Message::message_type
     quickcheck! {
         // Unknown code number returns error
-        fn message_message_type_bad_code_number(varnum: u32) -> TestResult {
+        fn message_message_type_bad_code_number(varnum: u8) -> TestResult {
             if varnum < 3 {
                 return TestResult::discard()
             }
@@ -553,7 +552,7 @@ mod tests {
         }
 
         // Known code number returns MessageType variant
-        fn message_message_type_good_code_number(varnum: u32) -> TestResult {
+        fn message_message_type_good_code_number(varnum: u8) -> TestResult {
             if varnum >= 3 {
                 return TestResult::discard()
             }
@@ -711,14 +710,14 @@ mod tests {
         }
 
         fn message_from_invalid_messagetype_number(code: u64) -> TestResult {
-            let maxval = u32::max_value() as u64;
+            let maxval = u8::max_value() as u64;
             if code <= maxval {
                 return TestResult::discard()
             }
 
             // GIVEN
             // array with invalid code number (ie code number is >
-            // u32::max_value()
+            // u8::max_value()
             let array: Vec<Value> = vec![code, 42, 42].iter()
                 .map(|v| Value::from(v.clone())).collect();
 
@@ -747,7 +746,7 @@ mod tests {
     }
 
     // A valid value is an array with a length of 3 or 4 and the first item in
-    // the array is u32
+    // the array is u8
     #[test]
     fn message_from_valid_value()
     {
@@ -764,7 +763,6 @@ mod tests {
         };
         assert!(ret)
     }
-
 }
 
 
