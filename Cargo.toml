@@ -5,6 +5,9 @@ authors = ["Ariel De Ocampo <arielmakestuff@gmail.com>"]
 
 [dependencies]
 
+# General deps
+# error-chain = "^0"
+
 # MsgPack deps
 serde = "1.0"
 serde_derive = "1.0"
@@ -12,11 +15,15 @@ rmp = "0.8"
 rmp-serde = "0.13"
 
 # Proc macro
-# siminaur-rpc-derive = { path = "derive" }
+siminau-rpc-derive = { path = "derive" }
 
 [dependencies.rmpv]
 version = "0.4"
 features = ["with-serde"]
+
+[dependencies.error-chain]
+git = "https://github.com/rust-lang-nursery/error-chain"
+tag = "0.11.0-rc.2"
 
 [dev-dependencies]
 tempdir = "0.3.5"
