@@ -86,7 +86,8 @@ impl<'a> ToPrimitive for Literal<'a> {
 }
 
 
-fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>, int_type: syn::Ident) -> quote::Tokens {
+fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>,
+                int_type: syn::Ident, maxnum: u64) -> quote::Tokens {
     quote! {
         impl CodeConvert<#name, #int_type> for #name {
             fn from_number(num: #int_type) -> RpcResult<#name> {
@@ -99,12 +100,16 @@ fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>, int_type: syn::Id
             fn to_number(&self) -> #int_type {
                 self.clone() as #int_type
             }
+
+            fn max_number() -> #int_type {
+                #maxnum as #int_type
+            }
         }
     }
 }
 
 
-fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
+fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens {
     if let syn::Body::Enum(ref body) = ast.body {
 
         let name = &ast.ident;
@@ -130,11 +135,11 @@ fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
                         panic!("#[derive(CodeConvert)] only supports literals")
                     }
                 }
-                let ret = quote! { #num => Ok(#ident) };
-                num += 1;
                 if num > maxnum {
                     maxnum = num;
                 }
+                let ret = quote! { #num => Ok(#ident) };
+                num += 1;
                 ret
             } else {
                 panic!("#[derive(CodeConvert)] currently does not support \
@@ -154,7 +159,7 @@ fn impl_code_convert(ast: &syn::MacroInput) -> quote::Tokens {
         } else {
             syn::Ident::from("u8")
         };
-        mk_code_impl(name, &cases, int_type)
+        mk_code_impl(name, &cases, int_type, maxnum)
     } else {
         panic!("#[derive(CodeConvert)] is only defined for enums not structs");
     }
