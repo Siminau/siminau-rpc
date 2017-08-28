@@ -104,9 +104,9 @@ pub mod error {
                 display("Invalid response message")
             }
 
-            InvalidResponseError {
+            InvalidResponseError(m: String) {
                 description("Invalid response error")
-                display("Invalid response error")
+                display("Invalid response error: {}", m)
             }
 
             InvalidNotification {
