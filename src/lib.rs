@@ -114,9 +114,9 @@ pub mod error {
                 display("Invalid notification message")
             }
 
-            InvalidNotificationType {
-                description("Invalid notification type")
-                display("Invalid notification type")
+            InvalidNotificationCode(m: String) {
+                description("Invalid notification code")
+                display("Invalid notification code: {}", m)
             }
 
             InvalidRequestArgs(m: String) {
@@ -124,9 +124,9 @@ pub mod error {
                 display("Invalid request arguments: {}", m)
             }
 
-            InvalidNotificationArgs {
+            InvalidNotificationArgs(m: String) {
                 description("Invalid notification arguments")
-                display("Invalid notification arguments")
+                display("Invalid notification arguments: {}", m)
             }
         }
     }
