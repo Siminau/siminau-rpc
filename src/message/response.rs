@@ -1,4 +1,4 @@
-// src/network/rpc/response.rs
+// src/message/response.rs
 // Copyright (C) 2017 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
