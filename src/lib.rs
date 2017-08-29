@@ -59,6 +59,9 @@ pub mod error {
         }
 
         errors {
+            // --------------------
+            // Message
+            // --------------------
             TypeError(t: String) {
                 description("invalid type")
                 display("Invalid type: {}", t)
@@ -84,14 +87,17 @@ pub mod error {
                 display("Invalid message type: {}", t)
             }
 
-            InvalidIDType {
-                description("Invalid message id type")
-                display("Invalid message id type")
-            }
-
+            // --------------------
+            // Request
+            // --------------------
             InvalidRequest {
                 description("Invalid request message")
                 display("Invalid request message")
+            }
+
+            InvalidRequestID {
+                description("invalid request id")
+                display("Invalid request ID")
             }
 
             InvalidRequestMethod(m: String) {
@@ -99,9 +105,22 @@ pub mod error {
                 display("Invalid request method: {}", m)
             }
 
+            InvalidRequestArgs(m: String) {
+                description("Invalid request arguments")
+                display("Invalid request arguments: {}", m)
+            }
+
+            // --------------------
+            // Response
+            // --------------------
             InvalidResponse {
                 description("Invalid response message")
                 display("Invalid response message")
+            }
+
+            InvalidResponseID {
+                description("invalid response id")
+                display("Invalid response ID")
             }
 
             InvalidResponseError(m: String) {
@@ -109,6 +128,9 @@ pub mod error {
                 display("Invalid response error: {}", m)
             }
 
+            // --------------------
+            // Notification
+            // --------------------
             InvalidNotification {
                 description("Invalid notification message")
                 display("Invalid notification message")
@@ -119,21 +141,31 @@ pub mod error {
                 display("Invalid notification code: {}", m)
             }
 
-            InvalidRequestArgs(m: String) {
-                description("Invalid request arguments")
-                display("Invalid request arguments: {}", m)
-            }
-
             InvalidNotificationArgs(m: String) {
                 description("Invalid notification arguments")
                 display("Invalid notification arguments: {}", m)
             }
+
+            // --------------------
+            // Misc
+            // --------------------
+            InvalidData {
+                description("invalid data")
+                display("Invalid data")
+            }
+
+            UnexpectedMessage {
+                description("unexpected message")
+                display("Unexpected message")
+            }
+
         }
     }
 }
 
 
 pub mod message;
+pub mod protocol;
 
 
 // ===========================================================================
