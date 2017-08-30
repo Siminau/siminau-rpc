@@ -30,15 +30,22 @@
 // Stdlib externs
 
 // Third-party externs
+extern crate bytes;
+
 #[macro_use]
 extern crate error_chain;
 
-extern crate rmpv;
+extern crate futures;
+extern crate tokio_core;
+extern crate tokio_io;
 
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
+extern crate rmp_serde as rmps;
+extern crate rmpv;
+extern crate serde;
 
 // Local externs
 
@@ -164,6 +171,7 @@ pub mod error {
 }
 
 
+pub mod codec;
 pub mod message;
 pub mod protocol;
 
