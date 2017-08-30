@@ -174,6 +174,7 @@ pub mod error {
 pub mod codec;
 pub mod message;
 pub mod protocol;
+pub mod server;
 
 
 // ===========================================================================
