@@ -307,6 +307,7 @@ pub trait RpcMessageType {
 ///
 /// [`Message`]: message/struct.Message.html
 /// [`rmpv::Value`]: https://docs.rs/rmpv/0.4.0/rmpv/enum.Value.html
+#[derive(Debug)]
 pub struct Message {
     msg: Value,
 }

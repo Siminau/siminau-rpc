@@ -166,6 +166,7 @@ where
 
 
 /// A representation of the Response RPC message type.
+#[derive(Debug)]
 pub struct ResponseMessage<C> {
     msg: Message,
     msgtype: PhantomData<C>,

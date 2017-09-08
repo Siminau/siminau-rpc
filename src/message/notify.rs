@@ -155,6 +155,7 @@ where
 
 
 /// A representation of the Notification RPC message type.
+#[derive(Debug)]
 pub struct NotificationMessage<C> {
     msg: Message,
     msgtype: PhantomData<C>,

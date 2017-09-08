@@ -172,6 +172,7 @@ where
 
 
 /// A representation of the Request RPC message type.
+#[derive(Debug)]
 pub struct RequestMessage<C> {
     msg: Message,
     codetype: PhantomData<C>,
