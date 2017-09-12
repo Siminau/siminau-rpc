@@ -226,10 +226,13 @@ pub trait CodeConvert<T>: Clone + PartialEq {
     /// Convert a number to type T.
     fn from_number(num: Self::int_type) -> RpcResult<T>;
 
-    /// Convert type To to a number.
+    /// Convert a u64 to type T.
+    fn from_u64(num: u64) -> RpcResult<T>;
+
+    /// Convert type T to a number.
     fn to_number(&self) -> Self::int_type;
 
-    /// Convert type To to a u64.
+    /// Convert type T to a u64.
     fn to_u64(&self) -> u64;
 
     /// Return the maximum number value

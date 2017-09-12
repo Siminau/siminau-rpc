@@ -28,9 +28,11 @@ extern crate quote;
 
 
 // Stdlib imports
+
 use proc_macro::TokenStream;
 
 // Third-party imports
+
 use num::ToPrimitive;
 
 // Local imports
@@ -42,7 +44,8 @@ use num::ToPrimitive;
 
 
 #[proc_macro_derive(CodeConvert)]
-pub fn code_convert(input: TokenStream) -> TokenStream {
+pub fn code_convert(input: TokenStream) -> TokenStream
+{
     // Construct string repr of type definition
     let s = input.to_string();
 
@@ -58,42 +61,52 @@ pub fn code_convert(input: TokenStream) -> TokenStream {
 
 
 struct Literal<'a> {
-    num: &'a syn::Lit
+    num: &'a syn::Lit,
 }
 
 
 impl<'a> From<&'a syn::Lit> for Literal<'a> {
-    fn from(num: &'a syn::Lit) -> Self {
+    fn from(num: &'a syn::Lit) -> Self
+    {
         Self { num: num }
     }
 }
 
 
 impl<'a> ToPrimitive for Literal<'a> {
-    fn to_i64(&self) -> Option<i64> {
+    fn to_i64(&self) -> Option<i64>
+    {
         match self.num {
             &syn::Lit::Int(num, _) => Some(num as i64),
-            _ => None
+            _ => None,
         }
     }
 
-    fn to_u64(&self) -> Option<u64> {
+    fn to_u64(&self) -> Option<u64>
+    {
         match self.num {
             &syn::Lit::Int(num, _) => Some(num),
-            _ => None
+            _ => None,
         }
     }
 }
 
 
-fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>,
-                int_type: syn::Ident, maxnum: u64) -> quote::Tokens {
+fn mk_code_impl(
+    name: &syn::Ident, cases: &Vec<quote::Tokens>, int_type: syn::Ident,
+    maxnum: u64
+) -> quote::Tokens
+{
     quote! {
         impl CodeConvert<#name> for #name {
             type int_type = #int_type;
 
             fn from_number(num: #int_type) -> RpcResult<#name> {
-                match num as u64 {
+                Self::from_u64(num as u64)
+            }
+
+            fn from_u64(num: u64) -> RpcResult<#name> {
+                match num {
                     #(#cases),* ,
                     _ => Err(RpcErrorKind::ValueError(num.to_string()).into())
                 }
@@ -124,43 +137,54 @@ fn mk_code_impl(name: &syn::Ident, cases: &Vec<quote::Tokens>,
 }
 
 
-fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens {
+fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens
+{
     if let syn::Body::Enum(ref body) = ast.body {
 
         let name = &ast.ident;
         let mut num = 0;
         let mut maxnum: u64 = 0;
-        let cases: Vec<_> = body.iter().map(|case| {
-            // Panic if the variant is a struct or tuple
-            if let syn::VariantData::Unit = case.data {
-                // Create variant identifier
-                let variant = &case.ident;
-                let ident = quote! { #name::#variant };
+        let cases: Vec<_> = body.iter()
+            .map(|case| {
+                // Panic if the variant is a struct or tuple
+                if let syn::VariantData::Unit = case.data {
+                    // Create variant identifier
+                    let variant = &case.ident;
+                    let ident = quote! { #name::#variant };
 
-                // If literal number assigned to variant, assign to num
-                if let Some(ref d) = case.discriminant {
-                    if let &syn::ConstExpr::Lit(ref l) = d {
-                        let lit = Literal::from(l);
-                        num = match lit.to_u64() {
-                            None =>  panic!("#[derive(CodeConvert)] only \
-                                             supports mapping to u64"),
-                            Some(v) => v
-                        };
-                    } else {
-                        panic!("#[derive(CodeConvert)] only supports literals")
+                    // If literal number assigned to variant, assign to num
+                    if let Some(ref d) = case.discriminant {
+                        if let &syn::ConstExpr::Lit(ref l) = d {
+                            let lit = Literal::from(l);
+                            num = match lit.to_u64() {
+                                None => {
+                                    panic!(
+                                        "#[derive(CodeConvert)] only supports \
+                                         mapping to u64"
+                                    )
+                                }
+                                Some(v) => v,
+                            };
+                        } else {
+                            panic!(
+                                "#[derive(CodeConvert)] only supports literals"
+                            )
+                        }
                     }
+                    if num > maxnum {
+                        maxnum = num;
+                    }
+                    let ret = quote! { #num => Ok(#ident) };
+                    num += 1;
+                    ret
+                } else {
+                    panic!(
+                        "#[derive(CodeConvert)] currently does not support \
+                         tuple or struct variants"
+                    );
                 }
-                if num > maxnum {
-                    maxnum = num;
-                }
-                let ret = quote! { #num => Ok(#ident) };
-                num += 1;
-                ret
-            } else {
-                panic!("#[derive(CodeConvert)] currently does not support \
-                       tuple or struct variants");
-            }
-        }).collect();
+            })
+            .collect();
 
         let u32_max = u32::max_value() as u64;
         let u16_max = u16::max_value() as u64;
