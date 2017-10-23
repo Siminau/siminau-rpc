@@ -172,8 +172,12 @@ pub mod error {
 
 
 pub mod codec;
+pub mod future;
 pub mod message;
 pub mod server;
+
+#[cfg(test)]
+mod test;
 
 
 // ===========================================================================

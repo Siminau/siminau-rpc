@@ -36,7 +36,8 @@ use tokio_core::reactor::Handle;
 pub trait ServerShutdown {
     fn server_control(&self) -> Option<(Handle, mpsc::Sender<ServerMessage>)>;
 
-    fn shutdown(&self) {
+    fn shutdown(&self)
+    {
         // Request shutdown
         let control = self.server_control();
         if let Some((h, tx)) = control {
