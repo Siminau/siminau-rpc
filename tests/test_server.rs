@@ -59,9 +59,9 @@ use tokio_service::{NewService, Service};
 
 use siminau_rpc::codec::MsgPackCodec;
 use siminau_rpc::error::{RpcErrorKind, RpcResult};
-use siminau_rpc::message::{CodeConvert, Message};
-use siminau_rpc::message::request::{RequestMessage, RpcRequest};
-use siminau_rpc::message::response::{ResponseMessage, RpcResponse};
+use siminau_rpc::core::{CodeConvert, Message};
+use siminau_rpc::core::request::{RequestMessage, RpcRequest};
+use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
 use siminau_rpc::server::{Server, ServerMessage, shutdown};
 
 

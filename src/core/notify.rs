@@ -1,4 +1,4 @@
-// src/message/notify.rs
+// src/core/notify.rs
 // Copyright (C) 2017 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
@@ -46,9 +46,9 @@
 //! use siminau_rpc::error::{RpcErrorKind, RpcResult};
 //!
 //! // Message and notify types
-//! use siminau_rpc::message::{CodeConvert, Message, MessageType,
+//! use siminau_rpc::core::{CodeConvert, Message, MessageType,
 //!                            RpcMessage};
-//! use siminau_rpc::message::notify::{NotificationMessage, RpcNotice};
+//! use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
 //!
 //! // Define Error codes
 //! #[derive(Debug, Clone, PartialEq, CodeConvert)]
@@ -98,9 +98,9 @@ use rmpv::Value;
 
 // Local imports
 
+use core::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
+           check_int, value_type};
 use error::{RpcErrorKind, RpcResult, RpcResultExt};
-use message::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
-              check_int, value_type};
 
 
 // ===========================================================================
@@ -117,8 +117,8 @@ use message::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
 /// extern crate siminau_rpc;
 ///
 /// use rmpv::Value;
-/// use siminau_rpc::message::{MessageType, RpcMessage};
-/// use siminau_rpc::message::notify::{NotificationMessage, RpcNotice};
+/// use siminau_rpc::core::{MessageType, RpcMessage};
+/// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
 ///
 /// # fn main() {
 /// // Create Notice alias
@@ -209,8 +209,8 @@ where
     /// extern crate siminau_rpc;
     ///
     /// use rmpv::Value;
-    /// use siminau_rpc::message::{MessageType, RpcMessage};
-    /// use siminau_rpc::message::notify::{NotificationMessage, RpcNotice};
+    /// use siminau_rpc::core::{MessageType, RpcMessage};
+    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
     ///
     /// # fn main() {
     /// // Create Notice alias
@@ -255,9 +255,9 @@ where
     /// extern crate siminau_rpc;
     ///
     /// use rmpv::Value;
-    /// use siminau_rpc::message::{CodeConvert, Message, MessageType,
+    /// use siminau_rpc::core::{CodeConvert, Message, MessageType,
     ///                            RpcMessage};
-    /// use siminau_rpc::message::notify::{NotificationMessage, RpcNotice};
+    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
     ///
     /// # fn main() {
     /// // Create an alias for NotificationMessage, re-using `MessageType` as the
@@ -423,9 +423,9 @@ mod tests {
 
     // // Local imports
 
+    use core::{CodeConvert, Message, MessageType, RpcMessage, value_type};
+    use core::notify::{NotificationMessage, RpcNotice};
     use error::{RpcErrorKind, RpcResult};
-    use message::{CodeConvert, Message, MessageType, RpcMessage, value_type};
-    use message::notify::{NotificationMessage, RpcNotice};
 
     // --------------------
     // Helpers

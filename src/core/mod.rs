@@ -1,4 +1,4 @@
-// src/message/mod.rs
+// src/core/mod.rs
 // Copyright (C) 2017 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
@@ -80,7 +80,7 @@
 //! extern crate siminau_rpc;
 //!
 //! use rmpv::Value;
-//! use siminau_rpc::message::{CodeConvert, Message, MessageType, RpcMessage};
+//! use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
 //!
 //! # fn main() {
 //! // Build expected value

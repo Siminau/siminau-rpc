@@ -1,4 +1,4 @@
-// src/message/request.rs
+// src/core/request.rs
 // Copyright (C) 2017 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
@@ -50,9 +50,9 @@
 //! use siminau_rpc::error::{RpcErrorKind, RpcResult};
 //!
 //! // Message and request types
-//! use siminau_rpc::message::{CodeConvert, Message, MessageType,
-//!                            RpcMessage};
-//! use siminau_rpc::message::request::{RequestMessage, RpcRequest};
+//! use siminau_rpc::core::{CodeConvert, Message, MessageType,
+//!                         RpcMessage};
+//! use siminau_rpc::core::request::{RequestMessage, RpcRequest};
 //!
 //! // Define Request methods
 //! #[derive(Debug, Clone, PartialEq, CodeConvert)]
@@ -105,9 +105,9 @@ use rmpv::Value;
 
 // Local imports
 
+use core::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
+           check_int, value_type};
 use error::{RpcErrorKind, RpcResult, RpcResultExt};
-use message::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
-              check_int, value_type};
 
 
 // ===========================================================================
@@ -124,8 +124,8 @@ use message::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
 /// extern crate siminau_rpc;
 ///
 /// use rmpv::Value;
-/// use siminau_rpc::message::{MessageType, RpcMessage};
-/// use siminau_rpc::message::request::{RequestMessage, RpcRequest};
+/// use siminau_rpc::core::{MessageType, RpcMessage};
+/// use siminau_rpc::core::request::{RequestMessage, RpcRequest};
 ///
 /// # fn main() {
 /// // Create Request alias
@@ -226,8 +226,8 @@ where
     /// extern crate siminau_rpc;
     ///
     /// use rmpv::Value;
-    /// use siminau_rpc::message::{MessageType, RpcMessage};
-    /// use siminau_rpc::message::request::{RequestMessage, RpcRequest};
+    /// use siminau_rpc::core::{MessageType, RpcMessage};
+    /// use siminau_rpc::core::request::{RequestMessage, RpcRequest};
     ///
     /// # fn main() {
     /// // Create Request alias
@@ -276,8 +276,8 @@ where
     /// extern crate siminau_rpc;
     ///
     /// use rmpv::Value;
-    /// use siminau_rpc::message::{CodeConvert, Message, MessageType, RpcMessage};
-    /// use siminau_rpc::message::request::{RequestMessage, RpcRequest};
+    /// use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
+    /// use siminau_rpc::core::request::{RequestMessage, RpcRequest};
     ///
     /// # fn main() {
     /// // Create an alias for RequestMessage, re-using `MessageType` as the
@@ -448,9 +448,9 @@ mod tests {
 
     // Local imports
 
+    use core::{CodeConvert, Message, MessageType, RpcMessage, value_type};
+    use core::request::{RequestMessage, RpcRequest};
     use error::{RpcErrorKind, RpcResult};
-    use message::{CodeConvert, Message, MessageType, RpcMessage, value_type};
-    use message::request::{RequestMessage, RpcRequest};
 
     // --------------------
     // Helpers

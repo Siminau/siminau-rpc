@@ -172,8 +172,8 @@ pub mod error {
 
 
 pub mod codec;
+pub mod core;
 pub mod future;
-pub mod message;
 pub mod server;
 
 #[cfg(test)]
@@ -187,23 +187,23 @@ mod test;
 
 // Enums
 
-pub use self::message::MessageType;
+pub use self::core::MessageType;
 
 // Types
 
-pub use self::message::Message;
-// pub use self::message::notify::NotificationMessage;
+pub use self::core::Message;
+// pub use self::core::notify::NotificationMessage;
 
-pub use self::message::request::RequestMessage;
-// pub use self::message::response::ResponseMessage;
+pub use self::core::request::RequestMessage;
+// pub use self::core::response::ResponseMessage;
 
 // Traits
 
-pub use self::message::{CodeConvert, RpcMessage, RpcMessageType};
-// pub use self::message::notify::RpcNotice;
+pub use self::core::{CodeConvert, RpcMessage, RpcMessageType};
+// pub use self::core::notify::RpcNotice;
 
-pub use self::message::request::RpcRequest;
-// pub use self::message::response::RpcResponse;
+pub use self::core::request::RpcRequest;
+// pub use self::core::response::RpcResponse;
 
 
 // ===========================================================================
