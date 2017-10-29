@@ -12,11 +12,13 @@
 
 // Third-party imports
 
+use rmpv::Value;
+
 // Local imports
 
 use core::CodeConvert;
 use core::notify::NotificationMessage;
-use core::request::RequestMessage;
+use core::request::{RequestMessage, RpcRequest};
 use core::response::ResponseMessage;
 use error::{RpcErrorKind, RpcResult};
 
@@ -89,6 +91,111 @@ pub type Response = ResponseMessage<ResponseCode>;
 
 
 pub type Info = NotificationMessage<NotifyCode>;
+
+
+// ===========================================================================
+// Request builder
+// ===========================================================================
+
+
+pub struct RequestBuilder {
+    id: u32,
+}
+
+
+impl RequestBuilder {
+    pub fn new(msgid: u32) -> RequestBuilder
+    {
+        RequestBuilder { id: msgid }
+    }
+
+    pub fn version(self, version_number: u32) -> Request
+    {
+        let ver = Value::from(version_number);
+        Request::new(self.id, RequestCode::Version, vec![ver])
+    }
+}
+
+
+pub fn request(msgid: u32) -> RequestBuilder
+{
+    RequestBuilder::new(msgid)
+}
+
+
+// ===========================================================================
+// Response builder
+// ===========================================================================
+
+
+pub struct ResponseBuilder<'request> {
+    request: &'request Request,
+}
+
+
+impl<'request> ResponseBuilder<'request> {
+    pub fn new(request: &'request Request) -> ResponseBuilder
+    {
+        ResponseBuilder { request: request }
+    }
+
+    pub fn error(self, errmsg: &str) -> Response
+    {
+        let errmsg = Value::from(errmsg);
+        let msgid = self.request.message_id();
+        Response::new(msgid, ResponseCode::Error, errmsg)
+    }
+
+    pub fn version(self, num: u32) -> RpcResult<Response>
+    {
+        let req = self.request;
+        match req.message_method() {
+            RequestCode::Version => {}
+
+            // If add any more variants to RequestCode, pls uncomment below
+            // _ => bail!(RpcErrorKind::InvalidRequest)
+        }
+
+        let num = Value::from(num);
+        let msgid = req.message_id();
+        let ret = Response::new(msgid, ResponseCode::Version, num);
+        Ok(ret)
+    }
+}
+
+
+pub fn response(request: &Request) -> ResponseBuilder
+{
+    ResponseBuilder::new(request)
+}
+
+
+// ===========================================================================
+// Info builder
+// ===========================================================================
+
+
+pub struct InfoBuilder;
+
+
+impl InfoBuilder {
+    pub fn new() -> InfoBuilder
+    {
+        InfoBuilder
+    }
+
+    pub fn done(self) -> Info
+    {
+        Info::new(NotifyCode::Done, vec![])
+    }
+}
+
+
+pub fn info() -> InfoBuilder
+{
+    InfoBuilder::new()
+}
+
 
 
 // ===========================================================================
