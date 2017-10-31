@@ -341,6 +341,27 @@ impl RequestBuilder {
         let ret = Request::new(self.id, RequestCode::Auth, msgargs);
         Ok(ret)
     }
+
+    // Request to abort a previous request if it hasn't been processed yet.
+    //
+    // Single argument:
+    // 1. message id of the previous request
+    pub fn flush(self, prev_msgid: u32) -> RpcResult<Request>
+    {
+        if prev_msgid == self.id {
+            let errmsg = format!(
+                "invalid argument ({}): prev msg id matches current \
+                 msg id",
+                prev_msgid
+            );
+            bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+        }
+
+        // Create argument
+        let msgargs = vec![Value::from(prev_msgid)];
+        let ret = Request::new(self.id, RequestCode::Flush, msgargs);
+        Ok(ret)
+    }
 }
 
 
@@ -415,26 +436,62 @@ impl<'request> ResponseBuilder<'request> {
         ResponseBuilder { request: request }
     }
 
+    // Private helper that validates that a request's method is as expected
+    fn check_request_method(&self, expected: RequestCode) -> RpcResult<()>
+    {
+        let code = self.request.message_method();
+        if code != expected {
+            let errmsg = format!(
+                "expected RequestCode::{:?}, got \
+                 RequestCode::{:?} instead",
+                expected,
+                code
+            );
+            bail!(RpcErrorKind::InvalidRequestMethod(errmsg));
+        }
+
+        Ok(())
+    }
+
     // Auth init succeeded
     //
     // Single argument:
     // 1. Unique server identifier for the auth file
     pub fn auth(self, id: FileID) -> RpcResult<Response>
     {
+        // Make sure request message's code is RequestCode::Auth
+        self.check_request_method(RequestCode::Auth)?;
+
+        // Make sure given FileID is valid
         if !id.is_valid() {
             bail!("id contains invalid FileKind");
         }
 
+        // Create file id response
         let fileid = vec![
             Value::from(id.kind.bits()),
             Value::from(id.version),
             Value::from(id.path),
         ];
-        let msgid = self.request.message_id();
 
         // Create response message
+        let msgid = self.request.message_id();
         let ret =
             Response::new(msgid, ResponseCode::Auth, Value::Array(fileid));
+        Ok(ret)
+    }
+
+    // Flush request succeeded
+    //
+    // No arguments
+    pub fn flush(self) -> RpcResult<Response>
+    {
+        // Make sure request message's code is RequestCode::Flush
+        self.check_request_method(RequestCode::Flush)?;
+
+        // Create response message
+        let msgid = self.request.message_id();
+        let ret = Response::new(msgid, ResponseCode::Flush, Value::Nil);
         Ok(ret)
     }
 

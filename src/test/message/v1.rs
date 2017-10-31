@@ -266,6 +266,100 @@ mod requestbuilder {
             }
         }
     }
+
+    mod flush {
+        // Third party imports
+
+        use quickcheck::TestResult;
+        use rmpv::Value;
+
+        // Local imports
+
+        use core::request::RpcRequest;
+        use error::RpcErrorKind;
+        use message::v1::{RequestCode, request};
+
+        quickcheck! {
+            fn bad_prev_msgid(old_msgid: u32) -> TestResult {
+                // --------------------
+                // GIVEN
+                // a u32 old message id and
+                // a request builder created w/ the old message id
+                // --------------------
+                let builder = request(old_msgid);
+
+                // --------------------
+                // WHEN
+                // RequestBuilder::flush() is called with the old message id
+                // --------------------
+                let result = builder.flush(old_msgid);
+
+                // --------------------
+                // THEN
+                // an error is returned
+                // --------------------
+                let val = match result {
+                    Err(e) => {
+                        match e.kind() {
+                            &RpcErrorKind::InvalidRequestArgs(ref msg) => {
+                                &msg[..] == &format!("invalid argument ({}): prev msg \
+                                                      id matches current msg id",
+                                                     old_msgid)
+                            }
+                            _ => false,
+                        }
+                    }
+                    Ok(_) => false,
+                };
+
+                TestResult::from_bool(val)
+            }
+
+            fn good_prev_msgid(new_msgid: u32, old_msgid: u32) -> TestResult {
+                if old_msgid == new_msgid {
+                    return TestResult::discard();
+                }
+
+                // --------------------
+                // GIVEN
+                // a u32 new message id and
+                // a u32 old message id and
+                // the new and old message ids are not equal and
+                // a request builder created w/ the new message id
+                // --------------------
+                let builder = request(new_msgid);
+
+                // --------------------
+                // WHEN
+                // RequestBuilder::flush() is called with the old message id
+                // --------------------
+                let result = builder.flush(old_msgid);
+
+                // --------------------
+                // THEN
+                // the result is a request message and
+                // the msg's id == new_msgid and
+                // the msg's code == RequestCode::Flush and
+                // the msg has 1 argument and
+                // the msg's single argument == old_msgid
+                // --------------------
+                let val = match result {
+                    Ok(msg) => {
+                        let msgargs = msg.message_args();
+                        let val = msg.message_id() == new_msgid &&
+                            msg.message_method() == RequestCode::Flush &&
+                            msgargs.len() == 1;
+
+                        let old = msgargs[0].as_u64().unwrap() as u32;
+                        val && old == old_msgid
+                    }
+                    Err(_) => false,
+                };
+
+                TestResult::from_bool(val)
+            }
+        }
+    }
 }
 
 
@@ -281,8 +375,7 @@ mod responsebuilder {
         use core::request::RpcRequest;
         use core::response::RpcResponse;
         use error::RpcErrorKind;
-        use message::v1::{FileID, FileKind, ProtocolResponse, ResponseCode,
-                          request, response};
+        use message::v1::{FileID, FileKind, ResponseCode, request, response};
 
         #[test]
         fn invalid_fileid() {
@@ -384,6 +477,162 @@ mod responsebuilder {
 
                 TestResult::from_bool(val)
             }
+
+            fn non_auth_request(filekind: u8, version: u32, path: u64) -> TestResult {
+                let invalid: u8 = 0b00000111;
+
+                // Use bitwise AND to check if kind has invalid bits set
+                if filekind & invalid != 0 {
+                    return TestResult::discard();
+                }
+                let kind = FileKind::from_bits(filekind).unwrap();
+
+                // discard invalid filekind values
+                if !kind.is_valid() {
+                    return TestResult::discard();
+                }
+
+                // --------------------
+                // GIVEN
+                // a valid FileID and
+                // a request w/ a non-Auth code and
+                // a response builder
+                // --------------------
+                let req = request(42).flush(41).unwrap();
+                let fileid = FileID::new(kind, version, path);
+                let builder = response(&req);
+
+                // --------------------
+                // WHEN
+                // ResponseBuilder::auth() is called
+                // --------------------
+                let result = builder.auth(fileid);
+
+                // --------------------
+                // THEN
+                // an error is returned
+                // --------------------
+                let val = match result {
+                    Err(e) => {
+                        match e.kind() {
+                            &RpcErrorKind::InvalidRequestMethod(ref s) => {
+                                &s[..] == "expected RequestCode::Auth, got \
+                                           RequestCode::Flush instead"
+                            }
+                            _ => true,
+                        }
+                    }
+                    Ok(_) => false,
+                };
+
+                TestResult::from_bool(val)
+            }
+
+        }
+    }
+
+    mod flush {
+        // Third party imports
+
+        use rmpv::Value;
+
+        // Local imports
+
+        use core::request::RpcRequest;
+        use core::response::RpcResponse;
+        use error::RpcErrorKind;
+        use message::v1::{ResponseCode, request, response};
+
+        #[test]
+        fn valid_message_id() {
+            // --------------------
+            // GIVEN
+            // a flush request and
+            // a response builder
+            // --------------------
+            let req = request(42).flush(41).unwrap();
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::flush() is called
+            // --------------------
+            let result = builder.flush();
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the response's id is the same as the request's id
+            // --------------------
+            let val = match result {
+                Ok(msg) => msg.message_id() == req.message_id(),
+                Err(_) => false,
+            };
+            assert!(val);
+        }
+
+        #[test]
+        fn valid_response_code() {
+            // --------------------
+            // GIVEN
+            // a flush request and
+            // a response builder
+            // --------------------
+            let req = request(42).flush(41).unwrap();
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::flush() is called
+            // --------------------
+            let result = builder.flush();
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the response's code is ResponseCode::Flush
+            // --------------------
+            let val = match result {
+                Ok(msg) => msg.error_code() == ResponseCode::Flush,
+                Err(_) => false,
+            };
+            assert!(val);
+        }
+
+        #[test]
+        fn non_flush_request() {
+            // --------------------
+            // GIVEN
+            // a request w/ a non-Flush code and
+            // a response builder
+            // --------------------
+            let req = request(42).auth(9001, "hello", "world").unwrap();
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::flush() is called
+            // --------------------
+            let result = builder.flush();
+
+            // --------------------
+            // THEN
+            // an error is returned
+            // --------------------
+            let val = match result {
+                Err(e) => {
+                    match e.kind() {
+                        &RpcErrorKind::InvalidRequestMethod(ref s) => {
+                            &s[..] == "expected RequestCode::Flush, got \
+                                       RequestCode::Auth instead"
+                        }
+                        _ => true,
+                    }
+                }
+                Ok(_) => false,
+            };
+
+            assert!(val);
         }
     }
 }
