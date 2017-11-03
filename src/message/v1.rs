@@ -325,14 +325,14 @@ impl RequestBuilder {
     // 1. file id of the auth file
     // 2. user name
     // 3. service name
-    pub fn auth(self, fileid: u32, username: &str, fsname: &str)
+    pub fn auth(self, authfile_id: u32, username: &str, fsname: &str)
         -> RpcResult<Request>
     {
         check_name("username", username)?;
         check_name("filesystem name", fsname)?;
 
         // Create arguments
-        let fileid = Value::from(fileid);
+        let fileid = Value::from(authfile_id);
         let username = Value::from(username);
         let fsname = Value::from(fsname);
         let msgargs = vec![fileid, username, fsname];
@@ -360,6 +360,38 @@ impl RequestBuilder {
         // Create argument
         let msgargs = vec![Value::from(prev_msgid)];
         let ret = Request::new(self.id, RequestCode::Flush, msgargs);
+        Ok(ret)
+    }
+
+    // Attach to the root directory of a given service.
+    //
+    // The auth file id is assumed to have been setup previously via a preceding
+    // Auth request.
+    //
+    // 4 arguments:
+    // 1. file id of the root directory
+    // 2. file id of the auth file
+    // 3. user name
+    // 4. service name
+    pub fn attach(self, rootdir_id: u32, authfile_id: u32, username: &str,
+                  fsname: &str) -> RpcResult<Request>
+    {
+        if rootdir_id == authfile_id {
+            let errmsg = format!(
+                "invalid rootdir_id value ({}): rootdir_id and authfile_id \
+                 must have different id numbers",
+                rootdir_id
+            );
+            bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+        }
+
+        check_name("username", username)?;
+        check_name("filesystem name", fsname)?;
+
+        // Create request message
+        let msgargs = vec![Value::from(rootdir_id), Value::from(authfile_id),
+                           Value::from(username), Value::from(fsname)];
+        let ret = Request::new(self.id, RequestCode::Attach, msgargs);
         Ok(ret)
     }
 }
@@ -492,6 +524,35 @@ impl<'request> ResponseBuilder<'request> {
         // Create response message
         let msgid = self.request.message_id();
         let ret = Response::new(msgid, ResponseCode::Flush, Value::Nil);
+        Ok(ret)
+    }
+
+    // Attach request succeeded
+    //
+    // Single argument:
+    // 1. Unique server identifier for the root directory
+    pub fn attach(self, rootdir_id: FileID) -> RpcResult<Response>
+    {
+        // Make sure request message's code is RequestCode::Attach
+        self.check_request_method(RequestCode::Attach)?;
+
+        // Make sure given FileID is valid
+        if !rootdir_id.is_valid() {
+            let errmsg = "rootdir server id contains invalid FileKind";
+            bail!(RpcErrorKind::ValueError(errmsg.to_owned()));
+        }
+
+        // Create file id response
+        let fileid = vec![
+            Value::from(rootdir_id.kind.bits()),
+            Value::from(rootdir_id.version),
+            Value::from(rootdir_id.path),
+        ];
+
+        // Create response message
+        let msgid = self.request.message_id();
+        let ret =
+            Response::new(msgid, ResponseCode::Attach, Value::Array(fileid));
         Ok(ret)
     }
 

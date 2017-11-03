@@ -167,7 +167,6 @@ pub mod error {
                 description("unexpected message")
                 display("Unexpected message")
             }
-
         }
     }
 }
