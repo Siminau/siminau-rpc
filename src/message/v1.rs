@@ -20,6 +20,7 @@ use core::CodeConvert;
 use core::request::{RequestMessage, RpcRequest};
 use core::response::{ResponseMessage, RpcResponse};
 use error::{RpcErrorKind, RpcResult};
+use util::is_printable;
 
 // ===========================================================================
 // Server File ID
@@ -288,24 +289,24 @@ pub struct RequestBuilder {
 }
 
 
-// Return true if given string has whitespace characters
-fn contains_whitespace(s: &str) -> bool
+fn check_name(var: &str, name: &str, ws_printable: bool) -> RpcResult<()>
 {
-    s.chars().any(|c| c.is_whitespace())
-}
-
-
-fn check_name(var: &str, name: &str) -> RpcResult<()>
-{
-    // Name must not be the empty string
-    if name.is_empty() {
-        let errmsg = format!("{} is an empty string", var);
-        bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
-    }
-    // Name must not have any whitespace characters
-    else if contains_whitespace(name) {
-        let errmsg =
-            format!("{} contains whitespace characters: {}", var, name);
+    // Name must not be empty and must not have any control characters
+    if !is_printable(name, ws_printable) {
+        let errmsg = if ws_printable {
+            format!(
+                "{} is either empty, or contains control characters: {}",
+                var,
+                name
+            )
+        } else {
+            format!(
+                "{} is either empty, contains whitespace, or contains control \
+                 characters: {}",
+                var,
+                name
+            )
+        };
         bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
     }
 
@@ -325,11 +326,12 @@ impl RequestBuilder {
     // 1. file id of the auth file
     // 2. user name
     // 3. service name
-    pub fn auth(self, authfile_id: u32, username: &str, fsname: &str)
-        -> RpcResult<Request>
+    pub fn auth(
+        self, authfile_id: u32, username: &str, fsname: &str
+    ) -> RpcResult<Request>
     {
-        check_name("username", username)?;
-        check_name("filesystem name", fsname)?;
+        check_name("username", username, false)?;
+        check_name("filesystem name", fsname, false)?;
 
         // Create arguments
         let fileid = Value::from(authfile_id);
@@ -373,8 +375,9 @@ impl RequestBuilder {
     // 2. file id of the auth file
     // 3. user name
     // 4. service name
-    pub fn attach(self, rootdir_id: u32, authfile_id: u32, username: &str,
-                  fsname: &str) -> RpcResult<Request>
+    pub fn attach(
+        self, rootdir_id: u32, authfile_id: u32, username: &str, fsname: &str
+    ) -> RpcResult<Request>
     {
         if rootdir_id == authfile_id {
             let errmsg = format!(
@@ -385,12 +388,16 @@ impl RequestBuilder {
             bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
         }
 
-        check_name("username", username)?;
-        check_name("filesystem name", fsname)?;
+        check_name("username", username, false)?;
+        check_name("filesystem name", fsname, false)?;
 
         // Create request message
-        let msgargs = vec![Value::from(rootdir_id), Value::from(authfile_id),
-                           Value::from(username), Value::from(fsname)];
+        let msgargs = vec![
+            Value::from(rootdir_id),
+            Value::from(authfile_id),
+            Value::from(username),
+            Value::from(fsname),
+        ];
         let ret = Request::new(self.id, RequestCode::Attach, msgargs);
         Ok(ret)
     }

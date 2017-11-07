@@ -15,6 +15,21 @@
 // Local imports
 
 // ===========================================================================
+// Helpers
+// ===========================================================================
+
+
+fn invalid_string(s: &str) -> bool
+{
+    if s.is_empty() {
+        true
+    } else {
+        s.chars().any(|c| c.is_whitespace() || c.is_control())
+    }
+}
+
+
+// ===========================================================================
 // Tests
 // ===========================================================================
 
@@ -34,14 +49,18 @@ mod requestbuilder {
         use error::RpcErrorKind;
         use message::v1::{request, RequestCode};
 
+        // Helpers
+        use super::super::invalid_string;
+
         quickcheck! {
 
             fn auth_request(fileid: u32, user: String, fs: String) -> TestResult
             {
-                // Ignore empty strings or strings with whitespace
+                // Ignore empty strings or strings with whitespace or strings
+                // with control characters
                 let names = vec![&user[..], &fs[..]];
                 for n in names {
-                    if n.is_empty() || n.chars().any(|c| c.is_whitespace()) {
+                    if invalid_string(n) {
                         return TestResult::discard();
                     }
                 }
@@ -95,13 +114,13 @@ mod requestbuilder {
             fn bad_username(fileid: u32, user: String, fs: String) -> TestResult
             {
                 // Ignore bad fs strings
-                if fs.is_empty() || fs.chars().any(|c| c.is_whitespace()) {
+                if invalid_string(&fs[..]) {
                     return TestResult::discard();
                 }
 
                 // Ignore valid username strings
-                if !user.is_empty() && user.chars().all(|c| !c.is_whitespace()) {
-                    return TestResult::discard()
+                if !invalid_string(&user[..]) {
+                    return TestResult::discard();
                 }
 
                 // --------------------
@@ -134,12 +153,11 @@ mod requestbuilder {
                     Err(e) => {
                         match e.kind() {
                             &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                                let msg = if user.is_empty() {
-                                    "username is an empty string".to_owned()
-                                } else {
-                                    format!("username contains whitespace characters: {}",
-                                            &user[..])
-                                };
+                                let msg = format!("username is either empty, \
+                                                   contains whitespace, or \
+                                                   contains control \
+                                                   characters: {}",
+                                                   &user[..]);
                                 m == &msg
                             }
                             _ => false,
@@ -153,12 +171,12 @@ mod requestbuilder {
             fn bad_fsname(fileid: u32, user: String, fs: String) -> TestResult
             {
                 // Ignore bad user strings
-                if user.is_empty() || user.chars().any(|c| c.is_whitespace()) {
+                if invalid_string(&user[..]) {
                     return TestResult::discard();
                 }
 
                 // Ignore valid fs strings
-                if !fs.is_empty() && fs.chars().all(|c| !c.is_whitespace()) {
+                if !invalid_string(&fs[..]) {
                     return TestResult::discard()
                 }
 
@@ -192,13 +210,11 @@ mod requestbuilder {
                     Err(e) => {
                         match e.kind() {
                             &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                                let msg = if fs.is_empty() {
-                                    "filesystem name is an empty string".to_owned()
-                                } else {
-                                    format!("filesystem name contains whitespace \
-                                             characters: {}",
-                                            &fs[..])
-                                };
+                                let msg = format!("filesystem name is either \
+                                                   empty, contains \
+                                                   whitespace, or contains \
+                                                   control characters: {}",
+                                                   &fs[..]);
                                 m == &msg
                             }
                             _ => false,
@@ -214,8 +230,8 @@ mod requestbuilder {
                 // Ignore valid username and fsname strings
                 let names = vec![&user[..], &fs[..]];
                 for n in names {
-                    if !n.is_empty() && n.chars().all(|c| !c.is_whitespace()) {
-                        return TestResult::discard()
+                    if !invalid_string(n) {
+                        return TestResult::discard();
                     }
                 }
 
@@ -249,12 +265,11 @@ mod requestbuilder {
                     Err(e) => {
                         match e.kind() {
                             &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                                let msg = if user.is_empty() {
-                                    "username is an empty string".to_owned()
-                                } else {
-                                    format!("username contains whitespace characters: {}",
-                                            &user[..])
-                                };
+                                let msg = format!("username is either empty, \
+                                                   contains whitespace, or \
+                                                   contains control \
+                                                   characters: {}",
+                                                  &user[..]);
                                 m == &msg
                             }
                             _ => false,
@@ -370,7 +385,10 @@ mod requestbuilder {
 
         use core::request::RpcRequest;
         use error::RpcErrorKind;
-        use message::v1::{RequestCode, request};
+        use message::v1::{request, RequestCode};
+
+        // Helpers
+        use super::super::invalid_string;
 
         quickcheck! {
 
@@ -428,12 +446,12 @@ mod requestbuilder {
                 }
 
                 // Ignore bad fs strings
-                if fs.is_empty() || fs.chars().any(|c| c.is_whitespace()) {
+                if invalid_string(&fs[..]) {
                     return TestResult::discard();
                 }
 
                 // Ignore valid username strings
-                if !user.is_empty() && user.chars().all(|c| !c.is_whitespace()) {
+                if !invalid_string(&user[..]) {
                     return TestResult::discard()
                 }
 
@@ -468,12 +486,11 @@ mod requestbuilder {
                     Err(e) => {
                         match e.kind() {
                             &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                                let msg = if user.is_empty() {
-                                    "username is an empty string".to_owned()
-                                } else {
-                                    format!("username contains whitespace characters: {}",
-                                            &user[..])
-                                };
+                                let msg = format!("username is either empty, \
+                                                   contains whitespace, or \
+                                                   contains control \
+                                                   characters: {}",
+                                                  &user[..]);
                                 m == &msg
                             }
                             _ => false,
@@ -484,8 +501,8 @@ mod requestbuilder {
                 TestResult::from_bool(val)
             }
 
-            fn bad_fsname(rootdir_id: u32, authfile_id: u32, user: String, fs:
-                          String) -> TestResult
+            fn bad_fsname(rootdir_id: u32, authfile_id: u32, user: String,
+                          fs: String) -> TestResult
             {
                 // Ignore if rootdir_id == authfile_id
                 if rootdir_id == authfile_id {
@@ -493,12 +510,12 @@ mod requestbuilder {
                 }
 
                 // Ignore bad user strings
-                if user.is_empty() || user.chars().any(|c| c.is_whitespace()) {
+                if invalid_string(&user[..]) {
                     return TestResult::discard();
                 }
 
                 // Ignore valid fs strings
-                if !fs.is_empty() && fs.chars().all(|c| !c.is_whitespace()) {
+                if !invalid_string(&fs[..]) {
                     return TestResult::discard()
                 }
 
@@ -533,13 +550,12 @@ mod requestbuilder {
                     Err(e) => {
                         match e.kind() {
                             &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                                let msg = if fs.is_empty() {
-                                    "filesystem name is an empty string".to_owned()
-                                } else {
-                                    format!("filesystem name contains whitespace \
-                                             characters: {}",
-                                            &fs[..])
-                                };
+                                let msg = format!("filesystem name is \
+                                                   either empty, contains \
+                                                   whitespace, or \
+                                                   contains control \
+                                                   characters: {}",
+                                                  &fs[..]);
                                 m == &msg
                             }
                             _ => false,
@@ -561,7 +577,7 @@ mod requestbuilder {
                 // Ignore valid username and fsname strings
                 let names = vec![&user[..], &fs[..]];
                 for n in names {
-                    if !n.is_empty() && n.chars().all(|c| !c.is_whitespace()) {
+                    if !invalid_string(n) {
                         return TestResult::discard()
                     }
                 }
@@ -597,12 +613,12 @@ mod requestbuilder {
                     Err(e) => {
                         match e.kind() {
                             &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                                let msg = if user.is_empty() {
-                                    "username is an empty string".to_owned()
-                                } else {
-                                    format!("username contains whitespace characters: {}",
-                                            &user[..])
-                                };
+                                let msg = format!("username is either \
+                                                   empty, contains \
+                                                   whitespace, or \
+                                                   contains control \
+                                                   characters: {}",
+                                                  &user[..]);
                                 m == &msg
                             }
                             _ => false,
@@ -624,7 +640,7 @@ mod requestbuilder {
                 // Ignore invalid username and fsname strings
                 let names = vec![&user[..], &fs[..]];
                 for n in names {
-                    if n.is_empty() || n.chars().any(|c| c.is_whitespace()) {
+                    if invalid_string(n) {
                         return TestResult::discard()
                     }
                 }
@@ -842,7 +858,6 @@ mod responsebuilder {
 
                 TestResult::from_bool(val)
             }
-
         }
     }
 
@@ -980,8 +995,9 @@ mod responsebuilder {
             let authfile_id = 1;
             let username = "hello";
             let fsname = "world";
-            let req = request(42).attach(rootdir_id, authfile_id, username,
-                                         fsname).unwrap();
+            let req = request(42)
+                .attach(rootdir_id, authfile_id, username, fsname)
+                .unwrap();
 
             // Create invalid fileid
             let invalid_filekind = FileKind::DIR | FileKind::AUTH;
@@ -1131,7 +1147,6 @@ mod responsebuilder {
 
                 TestResult::from_bool(val)
             }
-
         }
     }
 }

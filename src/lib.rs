@@ -177,6 +177,7 @@ pub mod core;
 pub mod future;
 pub mod message;
 pub mod server;
+pub mod util;
 
 #[cfg(test)]
 mod test;
