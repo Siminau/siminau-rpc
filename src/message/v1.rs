@@ -48,7 +48,7 @@ impl FileKind {
         ];
 
         // Return false if any invalid bits are found in filekind
-        !invalid.iter().any(|i| self.intersects(*i))
+        !invalid.iter().any(|i| self.contains(*i))
     }
 }
 
@@ -401,6 +401,44 @@ impl RequestBuilder {
         let ret = Request::new(self.id, RequestCode::Attach, msgargs);
         Ok(ret)
     }
+
+    // TODO: allow restricting length of path vec
+    //
+    // Walk a directory hierarchy
+    //
+    // 3 arguments:
+    // 1. existing file id
+    // 2. new file id of the walk result
+    // 3. list of path element strings to walk through
+    pub fn walk(
+        self, file_id: u32, newfile_id: u32, path: Vec<&str>
+    ) -> RpcResult<Request>
+    {
+        // file_id cannot be the same value as newfile_id
+        if file_id == newfile_id {
+            let errmsg = format!(
+                "invalid newfile_id value ({}): newfile_id \
+                 has the same value as file_id",
+                newfile_id
+            );
+            bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+        }
+
+        // Convert Vec<&str> into Vec<Value>
+        let pathargs: Vec<Value> =
+            path.iter().map(|i| Value::from(*i)).collect();
+
+        // Construct msg args
+        let msgargs = vec![
+            Value::from(file_id),
+            Value::from(newfile_id),
+            Value::Array(pathargs),
+        ];
+
+        // Create request message
+        let ret = Request::new(self.id, RequestCode::Walk, msgargs);
+        Ok(ret)
+    }
 }
 
 
@@ -560,6 +598,46 @@ impl<'request> ResponseBuilder<'request> {
         let msgid = self.request.message_id();
         let ret =
             Response::new(msgid, ResponseCode::Attach, Value::Array(fileid));
+        Ok(ret)
+    }
+
+    // Walk request succeded
+    //
+    // Single argument:
+    // 1. List of unique server identifiers for each path element specified in
+    //    the request
+    pub fn walk(self, path_id: &Vec<FileID>) -> RpcResult<Response>
+    {
+        // Make sure request message's code is RequestCode::Walk
+        self.check_request_method(RequestCode::Walk)?;
+
+        // Setup result vec
+        let mut result: Vec<Value> = Vec::with_capacity(path_id.len());
+
+        // Make sure all FileID objects in path_id are valid
+        // and convert to values for message
+        for (n, fid) in path_id.iter().enumerate() {
+            if !fid.is_valid() {
+                let errmsg =
+                    format!("item {} of path_id is an invalid FileID", n);
+                bail!(RpcErrorKind::ValueError(errmsg.to_owned()));
+            }
+
+            // Create file id response
+            let fileid = vec![
+                Value::from(fid.kind.bits()),
+                Value::from(fid.version),
+                Value::from(fid.path),
+            ];
+
+            // Store file id in result vec
+            result.push(Value::Array(fileid));
+        }
+
+        // Create response message
+        let msgid = self.request.message_id();
+        let ret =
+            Response::new(msgid, ResponseCode::Walk, Value::Array(result));
         Ok(ret)
     }
 
