@@ -4,6 +4,14 @@
 // This file is released under the MIT License.
 
 // ===========================================================================
+// Modules
+// ===========================================================================
+
+
+mod util;
+
+
+// ===========================================================================
 // Imports
 // ===========================================================================
 
@@ -22,68 +30,8 @@ use core::response::{ResponseMessage, RpcResponse};
 use error::{RpcErrorKind, RpcResult};
 use util::is_printable;
 
-// ===========================================================================
-// Server File ID
-// ===========================================================================
-
-
-bitflags! {
-    pub struct FileKind: u8 {
-        const DIR =     0b10000000;
-        const APPEND =  0b01000000;
-        const EXCL =    0b00100000;
-        const AUTH =    0b00010000;
-        const TMP =     0b00001000;
-        const FILE =    0b00000000;
-    }
-}
-
-
-impl FileKind {
-    pub fn is_valid(&self) -> bool
-    {
-        let invalid = vec![
-            FileKind::DIR | FileKind::AUTH,
-            FileKind::DIR | FileKind::APPEND,
-        ];
-
-        // Return false if any invalid bits are found in filekind
-        !invalid.iter().any(|i| self.contains(*i))
-    }
-}
-
-
-#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
-pub struct FileID {
-    pub kind: FileKind,
-    pub version: u32,
-    pub path: u64,
-}
-
-
-impl FileID {
-    pub fn new(kind: FileKind, version: u32, path: u64) -> FileID
-    {
-        FileID {
-            kind: kind,
-            version: version,
-            path: path,
-        }
-    }
-
-    pub fn is_valid(&self) -> bool
-    {
-        self.kind.is_valid()
-    }
-}
-
-
-impl Default for FileID {
-    fn default() -> FileID
-    {
-        FileID::new(FileKind::FILE, 0, 0)
-    }
-}
+// Re-exports
+pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode};
 
 
 // ===========================================================================
@@ -438,6 +386,16 @@ impl RequestBuilder {
         // Create request message
         let ret = Request::new(self.id, RequestCode::Walk, msgargs);
         Ok(ret)
+    }
+
+    // Prepare an existing file id for I/O
+    //
+    // 2 arguments:
+    // 1. existing file id
+    // 2. mode ie type of I/O
+    pub fn open(self, _file_id: u32, _mode: OpenMode) -> Request
+    {
+        unimplemented!()
     }
 }
 
