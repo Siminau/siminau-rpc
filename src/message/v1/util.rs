@@ -110,6 +110,20 @@ pub struct OpenMode {
 
 
 impl OpenMode {
+    pub const INVALID_BITS: u8 = 0b00111100;
+    const OPENKIND_BITS: u8 = 0b00000011;
+
+    pub fn from_bits(bits: u8) -> RpcResult<OpenMode>
+    {
+        if OpenMode::INVALID_BITS & bits != 0 {
+            let errmsg = format!("Invalid bits set: {:b}", bits);
+            bail!(RpcErrorKind::ValueError(errmsg));
+        }
+
+        let ret = OpenMode { mode: bits };
+        Ok(ret)
+    }
+
     pub fn bits(&self) -> u8
     {
         self.mode
@@ -124,8 +138,7 @@ impl OpenMode {
 
     pub fn kind(&self) -> OpenKind
     {
-        let val_bits: u8 = 0b00000011;
-        let val = val_bits & self.mode;
+        let val = OpenMode::OPENKIND_BITS & self.mode;
         OpenKind::from_number(val).expect("should never panic")
     }
 
@@ -139,8 +152,7 @@ impl OpenMode {
 
     pub fn replace_flags(&mut self, flags: OpenFlag)
     {
-        let val_bits: u8 = 0b00000011;
-        let kind = val_bits & self.mode;
+        let kind = OpenMode::OPENKIND_BITS & self.mode;
 
         // Save flags
         self.mode = flags.bits() | kind;

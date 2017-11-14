@@ -53,6 +53,85 @@ mod openmode {
         }
     }
 
+    mod from_bits {
+        // Stdlib imports
+
+        // Third-party imports
+        use quickcheck::TestResult;
+
+        // Local imports
+
+        use error::RpcErrorKind;
+        use message::v1::OpenMode;
+
+        quickcheck! {
+
+            fn valid_bits(bits: u8) -> TestResult
+            {
+                if bits & OpenMode::INVALID_BITS != 0 {
+                    return TestResult::discard();
+                }
+
+                // --------------------
+                // GIVEN
+                // valid u8 bits
+                // --------------------
+
+                // --------------------
+                // WHEN
+                // OpenMode::from_bits() is called with the valid u8 bits
+                // --------------------
+                let result = OpenMode::from_bits(bits);
+
+                // --------------------
+                // THEN
+                // a valid OpenMode object is returned
+                // --------------------
+                let val = match result {
+                    Ok(mode) => mode.bits() == bits,
+                    Err(_) => false,
+                };
+                TestResult::from_bool(val)
+            }
+
+            fn invalid_bits(bits: u8) -> TestResult
+            {
+                // Discard all valid bits
+                if bits & OpenMode::INVALID_BITS == 0 {
+                    return TestResult::discard();
+                }
+
+                // --------------------
+                // GIVEN
+                // invalid u8 bits
+                // --------------------
+
+                // --------------------
+                // WHEN
+                // OpenMode::from_bits() is called with the valid u8 bits
+                // --------------------
+                let result = OpenMode::from_bits(bits);
+
+                // --------------------
+                // THEN
+                // an error is returned
+                // --------------------
+                let val = match result {
+                    Err(e) => {
+                        match e.kind() {
+                            &RpcErrorKind::ValueError(ref m) => {
+                                *m == format!("Invalid bits set: {:b}", bits)
+                            }
+                            _ => false,
+                        }
+                    }
+                    _ => false,
+                };
+                TestResult::from_bool(val)
+            }
+        }
+    }
+
     mod flags {
         // Stdlib imports
 
