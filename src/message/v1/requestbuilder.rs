@@ -189,9 +189,13 @@ impl RequestBuilder {
     // 2 arguments:
     // 1. existing file id
     // 2. mode ie type of I/O
-    pub fn open(self, _file_id: u32, _mode: OpenMode) -> Request
+    pub fn open(self, file_id: u32, mode: OpenMode) -> Request
     {
-        unimplemented!()
+        // Construct msg args
+        let msgargs = vec![Value::from(file_id), Value::from(mode.bits())];
+
+        // Create request message
+        Request::new(self.id, RequestCode::Open, msgargs)
     }
 }
 

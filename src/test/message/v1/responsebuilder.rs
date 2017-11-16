@@ -703,6 +703,181 @@ mod walk {
 }
 
 
+mod open {
+    // Third party imports
+
+    use quickcheck::TestResult;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use core::response::RpcResponse;
+    use error::RpcErrorKind;
+    use message::v1::{request, response, FileID, FileKind, OpenMode,
+                      ResponseCode};
+
+    quickcheck! {
+        fn has_invalid_fileid(max_size: u32,
+                              mode: u8,
+                              filekind: u8,
+                              version: u32,
+                              path: u64) -> TestResult
+        {
+            let invalid: u8 = 0b00000111;
+
+            // Use bitwise AND to check if kind has any invalid bits set
+            // Discard any invalid values
+            if filekind & invalid != 0 {
+                return TestResult::discard();
+            }
+
+            // Create FileID
+            let kind = FileKind::from_bits(filekind).unwrap();
+            if kind.is_valid() {
+                return TestResult::discard();
+            }
+
+            let fileid = FileID::new(kind, version, path);
+
+            // --------------------
+            // GIVEN
+            // an open request message and
+            // an invalid file id and
+            // a u32 max_size value and
+            // a response builder
+            // --------------------
+            // Create open request message
+            let client_file_id = 42;
+            let open_mode = match OpenMode::from_bits(mode) {
+                // Discard any mode that has invalid bits set
+                Err(_) => return TestResult::discard(),
+
+                Ok(m) => m,
+            };
+            let req = request(42).open(client_file_id, open_mode);
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::open() is called w/ the invalid file id and
+            //    max_size
+            // --------------------
+            let result = builder.open(fileid, max_size);
+
+            // --------------------
+            // THEN
+            // an error is returned
+            // --------------------
+            let val = match result {
+                Err(e) => {
+                    if let &RpcErrorKind::ValueError(ref m) = e.kind() {
+                        &m[..] == "open file server id contains invalid FileKind"
+                    } else {
+                        false
+                    }
+                }
+                _ => false,
+            };
+
+            TestResult::from_bool(val)
+        }
+
+        fn has_valid_fileid(max_size: u32,
+                            mode: u8,
+                            filekind: u8,
+                            version: u32,
+                            path: u64) -> TestResult
+        {
+            let invalid: u8 = 0b00000111;
+
+            // Use bitwise AND to check if kind has any invalid bits set
+            if filekind & invalid != 0 {
+                return TestResult::discard();
+            }
+
+            // Create FileID
+            let kind = FileKind::from_bits(filekind).unwrap();
+
+            // Discard invalid values
+            if !kind.is_valid() {
+                return TestResult::discard();
+            }
+
+            let fileid = FileID::new(kind, version, path);
+
+            // --------------------
+            // GIVEN
+            // an open request message and
+            // a valid file id and
+            // a u32 max_size value and
+            // a response builder
+            // --------------------
+            // Create open request message
+            let client_file_id = 42;
+            let open_mode = match OpenMode::from_bits(mode) {
+                // Discard any mode that has invalid bits set
+                Err(_) => return TestResult::discard(),
+
+                Ok(m) => m,
+            };
+            let req = request(42).open(client_file_id, open_mode);
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::open() is called w/ the valid file id and
+            //    max_size
+            // --------------------
+            let result = builder.open(fileid, max_size);
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the msg's code is ResponseCode::Open and
+            // the msg's result is an array of 2 values and
+            // the result array's first item is an array of 3 values:
+            //     1. file id kind (u8)
+            //     2. file id version (u32)
+            //     3. file id path (u64)
+            //
+            //     and
+            // the result array's second item is a u32 value that's equal to
+            //    max_size
+            // --------------------
+            let val = match result {
+                Err(_) => false,
+                Ok(msg) => {
+                    // Check basic criteria for valid message
+                    let result = msg.result().as_array().unwrap();
+                    let val = msg.message_id() == req.message_id() &&
+                        msg.error_code() == ResponseCode::Open &&
+                        result.len() == 2;
+
+                    // Construct fileid from the response
+                    let resp_fileid = {
+                        let fileid = result[0].as_array().unwrap();
+                        assert_eq!(fileid.len(), 3);
+                        let bits = fileid[0].as_u64().unwrap() as u8;
+                        let filekind = FileKind::from_bits(bits).unwrap();
+                        let version = fileid[1].as_u64().unwrap() as u32;
+                        let path = fileid[2].as_u64().unwrap();
+                        FileID::new(filekind, version, path)
+                    };
+
+                    // Get response max size
+                    let resp_maxsize = result[1].as_u64().unwrap() as u32;
+
+                    // Return result
+                    val && resp_fileid == fileid &&  resp_maxsize == max_size
+                }
+            };
+
+            TestResult::from_bool(val)
+        }
+    }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================

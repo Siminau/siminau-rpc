@@ -808,6 +808,66 @@ mod walk {
 }
 
 
+mod open {
+    // Third party imports
+
+    use quickcheck::TestResult;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use message::v1::{request, OpenMode, RequestCode};
+
+    quickcheck! {
+
+        fn create_request_message(file_id: u32, mode: u8) -> TestResult
+        {
+            // --------------------
+            // GIVEN
+            // a u32 file id and
+            // an OpenMode object and
+            // a RequestBuilder object
+            // --------------------
+            let open_mode = match OpenMode::from_bits(mode) {
+                // Discard any mode that has invalid bits set
+                Err(_) => return TestResult::discard(),
+
+                Ok(m) => m,
+            };
+            let builder = request(42);
+
+            // --------------------
+            // WHEN
+            // RequestBuilder::open() is called with the u32 file id and the
+            //    valid mode
+            // --------------------
+            let result = builder.open(file_id, open_mode);
+
+            // --------------------
+            // THEN
+            // a request message is returned and
+            // the msg has a code of RequestCode::Open and
+            // the msg has 2 arguments and
+            // the arguments are:
+            //     1. u32 file_id
+            //     2. u8 mode
+            // and the msg file_id == the given u32 file id and
+            // the msg mode == the given u8 mode
+            // --------------------
+            let args = result.message_args();
+            let val = result.message_method() == RequestCode::Open &&
+                args.len() == 2;
+
+            let msg_fileid = args[0].as_u64().unwrap() as u32;
+            let msg_mode = args[1].as_u64().unwrap() as u8;
+
+            let val = val && msg_fileid == file_id && msg_mode == mode;
+            TestResult::from_bool(val)
+        }
+    }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================

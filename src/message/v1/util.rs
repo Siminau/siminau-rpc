@@ -104,6 +104,7 @@ pub enum OpenKind {
 }
 
 
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct OpenMode {
     mode: u8,
 }

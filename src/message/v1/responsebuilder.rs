@@ -217,6 +217,38 @@ impl<'request> ResponseBuilder<'request> {
         Ok(ret)
     }
 
+    // Open request succeeded
+    //
+    // 2 arguments:
+    // 1. Unique server identifier for the opened file
+    // 2. Maximum number of bytes guaranteed to be read from or written to the
+    //    file without a separate message. May be 0 which means no limit.
+    pub fn open(self, file_id: FileID, max_size: u32) -> RpcResult<Response>
+    {
+        // Make sure request message's code is RequestCode::Walk
+        self.check_request_method(RequestCode::Open)?;
+
+        if !file_id.is_valid() {
+            let errmsg = "open file server id contains invalid FileKind";
+            bail!(RpcErrorKind::ValueError(errmsg.to_owned()));
+        }
+
+        // Create file id response
+        let fileid = vec![
+            Value::from(file_id.kind.bits()),
+            Value::from(file_id.version),
+            Value::from(file_id.path),
+        ];
+
+        let result = vec![Value::Array(fileid), Value::from(max_size)];
+
+        // Create response message
+        let msgid = self.request.message_id();
+        let ret =
+            Response::new(msgid, ResponseCode::Open, Value::Array(result));
+        Ok(ret)
+    }
+
     // pub fn version(self, num: u32) -> RpcResult<Response>
     // {
     //     let req = self.request;
