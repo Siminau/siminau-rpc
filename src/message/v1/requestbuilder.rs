@@ -197,6 +197,30 @@ impl RequestBuilder {
         // Create request message
         Request::new(self.id, RequestCode::Open, msgargs)
     }
+
+    // Create a file and open it for I/O
+    //
+    // 3 arguments:
+    // 1. existing file id
+    // 2. name of the new file
+    // 3. mode ie type of I/O
+    pub fn create(
+        self, file_id: u32, filename: &str, mode: OpenMode
+    ) -> RpcResult<Request>
+    {
+        check_name("filename", filename, false)?;
+
+        // Construct msg args
+        let msgargs = vec![
+            Value::from(file_id),
+            Value::from(filename),
+            Value::from(mode.bits()),
+        ];
+
+        // Create request message
+        let ret = Request::new(self.id, RequestCode::Create, msgargs);
+        Ok(ret)
+    }
 }
 
 

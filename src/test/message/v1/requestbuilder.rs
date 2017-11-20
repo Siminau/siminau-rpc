@@ -15,21 +15,6 @@
 // Local imports
 
 // ===========================================================================
-// Helpers
-// ===========================================================================
-
-
-fn invalid_string(s: &str) -> bool
-{
-    if s.is_empty() {
-        true
-    } else {
-        s.chars().any(|c| c.is_whitespace() || c.is_control())
-    }
-}
-
-
-// ===========================================================================
 // Tests
 // ===========================================================================
 
@@ -48,7 +33,7 @@ mod auth {
     use message::v1::{request, RequestCode};
 
     // Helpers
-    use super::invalid_string;
+    use test::message::v1::invalid_string;
 
     quickcheck! {
 
@@ -280,6 +265,7 @@ mod auth {
     }
 }
 
+
 mod flush {
     // Third party imports
 
@@ -373,6 +359,7 @@ mod flush {
     }
 }
 
+
 mod attach {
     // Third party imports
 
@@ -386,7 +373,7 @@ mod attach {
     use message::v1::{request, RequestCode};
 
     // Helpers
-    use super::invalid_string;
+    use test::message::v1::invalid_string;
 
     quickcheck! {
 
@@ -690,6 +677,7 @@ mod attach {
     }
 }
 
+
 mod walk {
     // Third party imports
 
@@ -862,6 +850,143 @@ mod open {
             let msg_mode = args[1].as_u64().unwrap() as u8;
 
             let val = val && msg_fileid == file_id && msg_mode == mode;
+            TestResult::from_bool(val)
+        }
+    }
+}
+
+
+mod create {
+    // Third party imports
+
+    use quickcheck::TestResult;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use error::RpcErrorKind;
+    use message::v1::{request, OpenMode, RequestCode};
+
+    // Helpers
+    use test::message::v1::invalid_string;
+
+    quickcheck! {
+
+        fn bad_filename(fileid: u32, filename: String, mode: u8) -> TestResult
+        {
+            // Ignore valid username strings
+            if !invalid_string(&filename[..]) {
+                return TestResult::discard();
+            }
+
+            // --------------------
+            // GIVEN
+            // a u32 file id and
+            // a filename string and
+            // the filename string may be an empty string and
+            // the filename may contain whitespace characters and
+            // the filename may contain control characters and
+            // an OpenMode object and
+            // a request builder
+            // --------------------
+            let open_mode = match OpenMode::from_bits(mode) {
+                // Discard any mode that has invalid bits set
+                Err(_) => return TestResult::discard(),
+
+                Ok(m) => m,
+            };
+            let builder = request(42);
+
+            // --------------------
+            // WHEN
+            // RequestBuilder::create() is called w/ fileid, filename, and mode
+            // --------------------
+            let result = builder.create(fileid, &filename[..], open_mode);
+
+            // --------------------
+            // THEN
+            // the result is an InvalidRequestArgs error and
+            // the error msg is for the user name value
+            // --------------------
+            let val = match result {
+                Ok(_) => false,
+                Err(e) => {
+                    match e.kind() {
+                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
+                            let msg = format!("filename is either empty, \
+                                               contains whitespace, or \
+                                               contains control \
+                                               characters: {}",
+                                               &filename[..]);
+                            m == &msg
+                        }
+                        _ => false,
+                    }
+                }
+            };
+
+            TestResult::from_bool(val)
+        }
+
+        fn create_request_message(fileid: u32, filename: String, mode: u8) -> TestResult
+        {
+            // Ignore invalid filename strings
+            if invalid_string(&filename[..]) {
+                return TestResult::discard();
+            }
+
+            // --------------------
+            // GIVEN
+            // a u32 file id and
+            // a valid filename string and
+            // an OpenMode object and
+            // a RequestBuilder object
+            // --------------------
+            let open_mode = match OpenMode::from_bits(mode) {
+                // Discard any mode that has invalid bits set
+                Err(_) => return TestResult::discard(),
+
+                Ok(m) => m,
+            };
+            let builder = request(42);
+
+            // --------------------
+            // WHEN
+            // RequestBuilder::create() is called w/ fileid, filename, and mode
+            // --------------------
+            let result = builder.create(fileid, &filename[..], open_mode);
+
+            // --------------------
+            // THEN
+            // a request message is returned and
+            // the msg has a code of RequestCode::Create and
+            // the msg has 3 arguments and
+            // the arguments are:
+            //     1. u32 file_id
+            //     2. &str filename
+            //     3. u8 mode
+            // and the msg file_id == the given u32 file id and
+            // the msg filename == the given String filename and
+            // the msg mode == the given u8 mode
+            // --------------------
+            let val = match result {
+                Err(_) => false,
+                Ok(msg) => {
+                    let args = msg.message_args();
+                    let val = msg.message_method() == RequestCode::Create &&
+                        args.len() == 3;
+
+                    let msg_fileid = args[0].as_u64().unwrap() as u32;
+                    let msg_filename = args[1].as_str().unwrap();
+                    let msg_mode = args[2].as_u64().unwrap() as u8;
+
+                    val &&
+                        msg_fileid == fileid &&
+                        msg_filename == &filename[..] &&
+                        msg_mode == mode
+                }
+            };
+
             TestResult::from_bool(val)
         }
     }

@@ -78,6 +78,12 @@ impl ProtocolResponse for Response {
 }
 
 
+enum OpenOrCreate {
+    Open,
+    Create,
+}
+
+
 pub struct ResponseBuilder<'request> {
     request: &'request Request,
 }
@@ -217,19 +223,25 @@ impl<'request> ResponseBuilder<'request> {
         Ok(ret)
     }
 
-    // Open request succeeded
+    // Open or create request succeeded
     //
     // 2 arguments:
     // 1. Unique server identifier for the opened file
     // 2. Maximum number of bytes guaranteed to be read from or written to the
     //    file without a separate message. May be 0 which means no limit.
-    pub fn open(self, file_id: FileID, max_size: u32) -> RpcResult<Response>
+    fn open_or_create(
+        self, tag: OpenOrCreate, file_id: FileID, max_size: u32
+    ) -> RpcResult<Response>
     {
-        // Make sure request message's code is RequestCode::Walk
-        self.check_request_method(RequestCode::Open)?;
+        // Make sure request message's code matches tag
+        let (req_tag, resp_tag) = match tag {
+            OpenOrCreate::Open => (RequestCode::Open, ResponseCode::Open),
+            OpenOrCreate::Create => (RequestCode::Create, ResponseCode::Create),
+        };
+        self.check_request_method(req_tag)?;
 
         if !file_id.is_valid() {
-            let errmsg = "open file server id contains invalid FileKind";
+            let errmsg = "file server id contains invalid FileKind";
             bail!(RpcErrorKind::ValueError(errmsg.to_owned()));
         }
 
@@ -244,9 +256,30 @@ impl<'request> ResponseBuilder<'request> {
 
         // Create response message
         let msgid = self.request.message_id();
-        let ret =
-            Response::new(msgid, ResponseCode::Open, Value::Array(result));
+        let ret = Response::new(msgid, resp_tag, Value::Array(result));
         Ok(ret)
+    }
+
+    // Open request succeeded
+    //
+    // 2 arguments:
+    // 1. Unique server identifier for the opened file
+    // 2. Maximum number of bytes guaranteed to be read from or written to the
+    //    file without a separate message. May be 0 which means no limit.
+    pub fn open(self, file_id: FileID, max_size: u32) -> RpcResult<Response>
+    {
+        self.open_or_create(OpenOrCreate::Open, file_id, max_size)
+    }
+
+    // Create request succeeded
+    //
+    // 2 arguments:
+    // 1. Unique server identifier for the created file
+    // 2. Maximum number of bytes guaranteed to be read from or written to the
+    //    file without a separate message. May be 0 which means no limit.
+    pub fn create(self, file_id: FileID, max_size: u32) -> RpcResult<Response>
+    {
+        self.open_or_create(OpenOrCreate::Create, file_id, max_size)
     }
 
     // pub fn version(self, num: u32) -> RpcResult<Response>
