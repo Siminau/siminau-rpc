@@ -61,8 +61,7 @@ mod openmode {
 
         // Local imports
 
-        use error::RpcErrorKind;
-        use message::v1::OpenMode;
+        use message::v1::{OpenMode, OpenModeError};
 
         quickcheck! {
 
@@ -117,13 +116,9 @@ mod openmode {
                 // an error is returned
                 // --------------------
                 let val = match result {
-                    Err(e) => {
-                        match e.kind() {
-                            &RpcErrorKind::ValueError(ref m) => {
-                                *m == format!("Invalid bits set: {:b}", bits)
-                            }
-                            _ => false,
-                        }
+                    Err(e @ OpenModeError { .. }) => {
+                        let expected = format!("Invalid bits set: {:b}", bits);
+                        e.to_string() == expected
                     }
                     _ => false,
                 };

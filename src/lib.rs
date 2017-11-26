@@ -35,7 +35,8 @@ extern crate bitflags;
 extern crate bytes;
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure_derive;
+extern crate failure;
 
 extern crate futures;
 extern crate tokio_core;
@@ -60,117 +61,6 @@ extern crate siminau_rpc_derive;
 // ===========================================================================
 
 // General errors
-pub mod error {
-
-    error_chain!{
-        types {
-            RpcError, RpcErrorKind, RpcResultExt, RpcResult;
-        }
-
-        errors {
-            // --------------------
-            // Message
-            // --------------------
-            TypeError(t: String) {
-                description("invalid type")
-                display("Invalid type: {}", t)
-            }
-
-            ValueError(v: String) {
-                description("invalid value")
-                display("Invalid value: {}", v)
-            }
-
-            InvalidMessage(m: String) {
-                description("invalid message")
-                display("Invalid message: {}", m)
-            }
-
-            InvalidArrayLength(v: String) {
-                description("Invalid message array length")
-                display("Invalid message array length: {}", v)
-            }
-
-            InvalidMessageType(t: String) {
-                description("Invalid message type")
-                display("Invalid message type: {}", t)
-            }
-
-            // --------------------
-            // Request
-            // --------------------
-            InvalidRequest {
-                description("Invalid request message")
-                display("Invalid request message")
-            }
-
-            InvalidRequestID {
-                description("invalid request id")
-                display("Invalid request ID")
-            }
-
-            InvalidRequestMethod(m: String) {
-                description("Invalid request method")
-                display("Invalid request method: {}", m)
-            }
-
-            InvalidRequestArgs(m: String) {
-                description("Invalid request arguments")
-                display("Invalid request arguments: {}", m)
-            }
-
-            // --------------------
-            // Response
-            // --------------------
-            InvalidResponse {
-                description("Invalid response message")
-                display("Invalid response message")
-            }
-
-            InvalidResponseID {
-                description("invalid response id")
-                display("Invalid response ID")
-            }
-
-            InvalidResponseError(m: String) {
-                description("Invalid response error")
-                display("Invalid response error: {}", m)
-            }
-
-            // --------------------
-            // Notification
-            // --------------------
-            InvalidNotification {
-                description("Invalid notification message")
-                display("Invalid notification message")
-            }
-
-            InvalidNotificationCode(m: String) {
-                description("Invalid notification code")
-                display("Invalid notification code: {}", m)
-            }
-
-            InvalidNotificationArgs(m: String) {
-                description("Invalid notification arguments")
-                display("Invalid notification arguments: {}", m)
-            }
-
-            // --------------------
-            // Misc
-            // --------------------
-            InvalidData {
-                description("invalid data")
-                display("Invalid data")
-            }
-
-            UnexpectedMessage {
-                description("unexpected message")
-                display("Unexpected message")
-            }
-        }
-    }
-}
-
 
 pub mod codec;
 pub mod core;

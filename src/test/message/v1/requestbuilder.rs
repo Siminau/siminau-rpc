@@ -23,14 +23,14 @@ mod auth {
 
     // Third party imports
 
+    use failure::Fail;
     use quickcheck::TestResult;
     use rmpv::Value;
 
     // Local imports
 
     use core::request::RpcRequest;
-    use error::RpcErrorKind;
-    use message::v1::{request, RequestCode};
+    use message::v1::{request, BuildRequestError, RequestCode};
 
     // Helpers
     use test::message::v1::invalid_string;
@@ -128,24 +128,23 @@ mod auth {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError error and
             // the error msg is for the user name value
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("username is either empty, \
-                                               contains whitespace, or \
-                                               contains control \
-                                               characters: {}",
-                                               &user[..]);
-                            m == &msg
-                        }
-                        _ => false,
-                    }
+                Err(e @ BuildRequestError::Auth(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build auth request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    let cause = e.cause().unwrap();
+                    let expected = "username is either empty, contains \
+                                    whitespace, or contains control \
+                                    characters";
+                    ret && cause.to_string() == expected.to_owned()
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -185,24 +184,27 @@ mod auth {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError error and
             // the error msg is for the fs name value
             // --------------------
             let val = match result {
-                Ok(_) => true,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("filesystem name is either \
-                                               empty, contains \
-                                               whitespace, or contains \
-                                               control characters: {}",
-                                               &fs[..]);
-                            m == &msg
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Auth(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build auth request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = "filesystem name is either empty, \
+                                        contains whitespace, or contains \
+                                        control characters";
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -240,24 +242,27 @@ mod auth {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError error and
             // the error msg is for the username value
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("username is either empty, \
-                                               contains whitespace, or \
-                                               contains control \
-                                               characters: {}",
-                                              &user[..]);
-                            m == &msg
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Auth(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build auth request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = "username is either empty, \
+                                        contains whitespace, or contains \
+                                        control characters";
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -269,13 +274,13 @@ mod auth {
 mod flush {
     // Third party imports
 
+    // use failure::Fail;
     use quickcheck::TestResult;
 
     // Local imports
 
     use core::request::RpcRequest;
-    use error::RpcErrorKind;
-    use message::v1::{request, RequestCode};
+    use message::v1::{request, BuildRequestError, RequestCode};
 
     quickcheck! {
         fn bad_prev_msgid(old_msgid: u32) -> TestResult {
@@ -297,17 +302,14 @@ mod flush {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref msg) => {
-                            &msg[..] == &format!("invalid argument ({}): prev msg \
-                                                  id matches current msg id",
-                                                 old_msgid)
-                        }
-                        _ => false,
-                    }
+                Err(e @ BuildRequestError::Flush(_)) => {
+                    // Check error msg
+                    let expected = format!("Unable to build flush request \
+                                            message: prev msg id ({}) matches \
+                                            current msg id", old_msgid);
+                    e.to_string() == expected
                 }
-                Ok(_) => false,
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -363,14 +365,14 @@ mod flush {
 mod attach {
     // Third party imports
 
+    use failure::Fail;
     use quickcheck::TestResult;
     use rmpv::Value;
 
     // Local imports
 
     use core::request::RpcRequest;
-    use error::RpcErrorKind;
-    use message::v1::{request, RequestCode};
+    use message::v1::{request, BuildRequestError, RequestCode};
 
     // Helpers
     use test::message::v1::invalid_string;
@@ -405,18 +407,23 @@ mod attach {
             // the result is an error
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref msg) => {
-                            msg == &format!("invalid rootdir_id value ({}): \
-                                             rootdir_id and authfile_id must \
-                                             have different id numbers",
-                                            rootdir_id)
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Attach(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build attach request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = format!("Invalid rootdir_id value \
+                                                ({}): rootdir_id matches \
+                                                authfile_id", rootdir_id);
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -463,24 +470,27 @@ mod attach {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError::Attach error and
             // the error msg is for the user name value
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("username is either empty, \
-                                               contains whitespace, or \
-                                               contains control \
-                                               characters: {}",
-                                              &user[..]);
-                            m == &msg
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Attach(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build attach request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = "Name error: username is either empty, \
+                                        contains whitespace, or contains \
+                                        control characters";
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -527,25 +537,27 @@ mod attach {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError::Attach error and
             // the error msg is for the fs name value
             // --------------------
             let val = match result {
-                Ok(_) => true,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("filesystem name is \
-                                               either empty, contains \
-                                               whitespace, or \
-                                               contains control \
-                                               characters: {}",
-                                              &fs[..]);
-                            m == &msg
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Attach(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build attach request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = "Name error: filesystem name is either \
+                                        empty, contains whitespace, or \
+                                        contains control characters";
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -590,25 +602,27 @@ mod attach {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError::Attach error and
             // the error msg is for the username value
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("username is either \
-                                               empty, contains \
-                                               whitespace, or \
-                                               contains control \
-                                               characters: {}",
-                                              &user[..]);
-                            m == &msg
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Attach(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build attach request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = "Name error: username is either empty, \
+                                        contains whitespace, or contains \
+                                        control characters";
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -681,14 +695,14 @@ mod attach {
 mod walk {
     // Third party imports
 
+    // use failure::Fail;
     use quickcheck::TestResult;
     use rmpv::Value;
 
     // Local imports
 
     use core::request::RpcRequest;
-    use error::RpcErrorKind;
-    use message::v1::{request, RequestCode};
+    use message::v1::{request, BuildRequestError, RequestCode};
 
     quickcheck! {
 
@@ -717,18 +731,15 @@ mod walk {
             // the result is an error
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref msg) => {
-                            msg == &format!("invalid newfile_id value \
-                                             ({}): newfile_id has the \
-                                             same value as file_id",
-                                            newfile_id)
-                        }
-                        _ => false,
-                    }
+                Err(e @ BuildRequestError::Walk(_)) => {
+                    let expected = format!(
+                        "Unable to build walk request message: newfile_id \
+                         ({}) has the same value as file_id",
+                        newfile_id
+                    );
+                    e.to_string() == expected
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -799,6 +810,7 @@ mod walk {
 mod open {
     // Third party imports
 
+    // use failure::Fail;
     use quickcheck::TestResult;
 
     // Local imports
@@ -859,13 +871,13 @@ mod open {
 mod create {
     // Third party imports
 
+    use failure::Fail;
     use quickcheck::TestResult;
 
     // Local imports
 
     use core::request::RpcRequest;
-    use error::RpcErrorKind;
-    use message::v1::{request, OpenMode, RequestCode};
+    use message::v1::{request, BuildRequestError, OpenMode, RequestCode};
 
     // Helpers
     use test::message::v1::invalid_string;
@@ -905,24 +917,27 @@ mod create {
 
             // --------------------
             // THEN
-            // the result is an InvalidRequestArgs error and
+            // the result is a BuildRequestError::Create error and
             // the error msg is for the user name value
             // --------------------
             let val = match result {
-                Ok(_) => false,
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestArgs(ref m) => {
-                            let msg = format!("filename is either empty, \
-                                               contains whitespace, or \
-                                               contains control \
-                                               characters: {}",
-                                               &filename[..]);
-                            m == &msg
-                        }
-                        _ => false,
+                Err(e @ BuildRequestError::Create(_)) => {
+                    // Check top-level error
+                    let expected = "Unable to build create request message";
+                    let ret = e.to_string() == expected;
+
+                    // Check cause error
+                    if ret {
+                        let cause = e.cause().unwrap();
+                        let expected = "filename is either empty, \
+                                        contains whitespace, or contains \
+                                        control characters";
+                        cause.to_string() == expected.to_owned()
+                    } else {
+                        false
                     }
                 }
+                _ => false,
             };
 
             TestResult::from_bool(val)

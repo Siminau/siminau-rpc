@@ -101,14 +101,14 @@ fn mk_code_impl(
         impl CodeConvert<#name> for #name {
             type int_type = #int_type;
 
-            fn from_number(num: #int_type) -> RpcResult<#name> {
+            fn from_number(num: #int_type) -> Result<#name, CodeValueError> {
                 Self::from_u64(num as u64)
             }
 
-            fn from_u64(num: u64) -> RpcResult<#name> {
+            fn from_u64(num: u64) -> Result<#name, CodeValueError> {
                 match num {
                     #(#cases),* ,
-                    _ => Err(RpcErrorKind::ValueError(num.to_string()).into())
+                    _ => Err(CodeValueError {code: num})
                 }
             }
 

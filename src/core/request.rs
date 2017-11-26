@@ -46,11 +46,10 @@
 //!
 //! use rmpv::Value;
 //!
-//! // Error types must be in scope in order for CodeConvert to work
-//! use siminau_rpc::error::{RpcErrorKind, RpcResult};
-//!
 //! // Message and request types
-//! use siminau_rpc::core::{CodeConvert, Message, MessageType,
+//! // Note: CodeValueError must be in scope for the CodeConvert custom derive
+//! // to work
+//! use siminau_rpc::core::{CodeConvert, CodeValueError, Message, MessageType,
 //!                         RpcMessage};
 //! use siminau_rpc::core::request::{RequestMessage, RpcRequest};
 //!
@@ -105,9 +104,68 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
-           check_int, value_type};
-use error::{RpcErrorKind, RpcResult, RpcResultExt};
+use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
+           MessageType, RpcMessage, RpcMessageType};
+
+
+// ===========================================================================
+// RequestMessage errors
+// ===========================================================================
+
+
+#[derive(Debug, Fail)]
+#[fail(display = "expected request message type value {}, got {}",
+       expected_type, msgtype)]
+pub struct RequestTypeError {
+    expected_type: u8,
+    msgtype: u8,
+}
+
+
+#[derive(Debug, Fail)]
+#[fail(display = "Invalid request message id")]
+pub struct RequestIDError {
+    #[cause] err: CheckIntError,
+}
+
+
+#[derive(Debug, Fail)]
+pub enum RequestCodeError {
+    #[fail(display = "Invalid request code value")]
+    InvalidValue(#[cause] CheckIntError),
+
+    #[fail(display = "Cannot cast {} into request method value", _0)]
+    ToNumber(u64),
+
+    #[fail(display = "Cannot convert method value {} into request code", _0)]
+    ToCode(u64),
+}
+
+
+#[derive(Debug, Fail)]
+#[fail(display = "Expected array for request arguments but got {}", value_type)]
+pub struct RequestArgsError {
+    value_type: String,
+}
+
+
+#[derive(Debug, Fail)]
+pub enum ToRequestError {
+    #[fail(display = "expected array length of 4, got {}", _0)]
+    ArrayLength(usize),
+
+    #[fail(display = "Invalid request message type")]
+    InvalidType(#[cause] RequestTypeError),
+
+    #[fail(display = "Invalid request message id")]
+    InvalidID(#[cause] CheckIntError),
+
+    #[fail(display = "Invalid request message code")]
+    InvalidCode(#[cause] RequestCodeError),
+
+    #[fail(display = "Invalid request message arguments")]
+    InvalidArgs(#[cause] RequestArgsError),
+}
 
 
 // ===========================================================================
@@ -147,15 +205,13 @@ where
     C: CodeConvert<C>,
 {
     /// Return the message's ID value.
-    fn message_id(&self) -> u32
-    {
+    fn message_id(&self) -> u32 {
         let msgid = &self.as_vec()[1];
         msgid.as_u64().unwrap() as u32
     }
 
     /// Return the message's code/method value.
-    fn message_method(&self) -> C
-    {
+    fn message_method(&self) -> C {
         let msgmeth = &self.as_vec()[2];
         let msgmeth = msgmeth.as_u64().unwrap();
         let msgmeth = C::cast_number(msgmeth).unwrap();
@@ -163,8 +219,7 @@ where
     }
 
     /// Return the message's arguments.
-    fn message_args(&self) -> &Vec<Value>
-    {
+    fn message_args(&self) -> &Vec<Value> {
         let msgargs = &self.as_vec()[3];
         msgargs.as_array().unwrap()
     }
@@ -183,13 +238,11 @@ impl<C> RpcMessage for RequestMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_vec(&self) -> &Vec<Value>
-    {
+    fn as_vec(&self) -> &Vec<Value> {
         self.msg.as_vec()
     }
 
-    fn as_value(&self) -> &Value
-    {
+    fn as_value(&self) -> &Value {
         self.msg.as_value()
     }
 }
@@ -199,8 +252,7 @@ impl<C> RpcMessageType for RequestMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_message(&self) -> &Message
-    {
+    fn as_message(&self) -> &Message {
         &self.msg
     }
 }
@@ -238,8 +290,7 @@ where
     ///                        vec![Value::from(42)]);
     /// # }
     /// ```
-    pub fn new(msgid: u32, msgmeth: C, args: Vec<Value>) -> Self
-    {
+    pub fn new(msgid: u32, msgmeth: C, args: Vec<Value>) -> Self {
         let msgtype = Value::from(MessageType::Request as u8);
         let msgid = Value::from(msgid);
         let msgmeth = Value::from(msgmeth.to_u64());
@@ -296,30 +347,30 @@ where
     /// let req = Request::from(msg).unwrap();
     /// # }
     /// ```
-    pub fn from(msg: Message) -> RpcResult<Self>
-    {
+    pub fn from(msg: Message) -> Result<Self, ToRequestError> {
         {
             // Requests is always represented as an array of 4 values
             let array = msg.as_vec();
             let arraylen = array.len();
             if arraylen != 4 {
-                let errmsg =
-                    format!("expected array length of 4, got {}", arraylen);
-                bail!(RpcErrorKind::InvalidArrayLength(errmsg))
+                let err = ToRequestError::ArrayLength(arraylen);
+                return Err(err);
             }
 
             // Run all check functions and return the first error generated
-            let funcvec: Vec<fn(&Value) -> RpcResult<()>>;
-            funcvec = vec![
-                Self::check_message_type,
-                Self::check_message_id,
-                Self::check_message_method,
-                Self::check_message_args,
-            ];
+            Self::check_message_type(&array[0])
+                .map_err(|e| ToRequestError::InvalidType(e))?;
 
-            for (i, func) in funcvec.iter().enumerate() {
-                func(&array[i]).chain_err(|| RpcErrorKind::InvalidRequest)?;
-            }
+            Self::check_message_id(&array[1]).map_err(|e| {
+                let RequestIDError { err } = e;
+                ToRequestError::InvalidID(err)
+            })?;
+
+            Self::check_message_method(&array[2])
+                .map_err(|e| ToRequestError::InvalidCode(e))?;
+
+            Self::check_message_args(&array[3])
+                .map_err(|e| ToRequestError::InvalidArgs(e))?;
         }
         Ok(Self {
             msg: msg,
@@ -330,80 +381,64 @@ where
     // Checks that the message type parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_type(msgtype: &Value) -> RpcResult<()>
-    {
+    fn check_message_type(msgtype: &Value) -> Result<(), RequestTypeError> {
         let msgtype = msgtype.as_u64().unwrap() as u8;
         let expected_msgtype = MessageType::Request.to_number();
         if msgtype != expected_msgtype {
-            let errmsg = format!(
-                "expected {} for message type (ie \
-                 MessageType::Request), got {}",
-                expected_msgtype,
-                msgtype
-            );
-            bail!(RpcErrorKind::InvalidMessageType(errmsg))
+            let err = RequestTypeError {
+                expected_type: expected_msgtype,
+                msgtype: msgtype,
+            };
+            Err(err)
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     // Checks that the message id parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_id(msgid: &Value) -> RpcResult<()>
-    {
+    fn check_message_id(msgid: &Value) -> Result<(), RequestIDError> {
         check_int(msgid.as_u64(), u32::max_value() as u64, "u32".to_string())
-            .chain_err(|| RpcErrorKind::InvalidRequestID)?;
+            .map_err(|e| RequestIDError { err: e })?;
         Ok(())
     }
 
     // Checks that the message method parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_method(msgmeth: &Value) -> RpcResult<()>
-    {
+    fn check_message_method(msgmeth: &Value) -> Result<(), RequestCodeError> {
         let msgmeth =
             check_int(msgmeth.as_u64(), C::max_number(), "a value".to_string())
-                .chain_err(|| {
-                    RpcErrorKind::InvalidRequestMethod(
-                        String::from("invalid value for method"),
-                    )
-                })?;
+                .map_err(|e| RequestCodeError::InvalidValue(e))?;
 
         // Convert msgmeth into a number that can be accepted by the CodeConvert
         // type
+        let msgmeth_u64 = msgmeth as u64;
         let val = match C::cast_number(msgmeth as u64) {
             Some(v) => v,
             None => {
-                let errmsg = format!(
-                    "Cannot cast {} into request method value",
-                    msgmeth
-                );
-                bail!(RpcErrorKind::InvalidRequestMethod(errmsg))
+                let err = RequestCodeError::ToNumber(msgmeth_u64);
+                return Err(err);
             }
         };
 
         // Try to convert msgmeth into a CodeConvert type
-        C::from_number(val).chain_err(|| {
-            let errmsg =
-                format!("Cannot convert {} into request method", msgmeth);
-            RpcErrorKind::InvalidRequestMethod(errmsg)
-        })?;
+        C::from_number(val).map_err(|_| RequestCodeError::ToCode(msgmeth_u64))?;
         Ok(())
     }
 
     // Check that the message arguments parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_args(msgargs: &Value) -> RpcResult<()>
-    {
+    fn check_message_args(msgargs: &Value) -> Result<(), RequestArgsError> {
         match msgargs.as_array() {
             Some(_) => Ok(()),
             None => {
-                let errmsg = format!(
-                    "expected array for request arguments but got {}",
-                    value_type(&msgargs)
-                );
-                Err(RpcErrorKind::InvalidRequestArgs(errmsg).into())
+                let err = RequestArgsError {
+                    value_type: value_type(&msgargs),
+                };
+                Err(err)
             }
         }
     }
@@ -412,8 +447,7 @@ where
 
 // Also implements Into<Message> for RequestMessage
 impl<C> From<RequestMessage<C>> for Message {
-    fn from(req: RequestMessage<C>) -> Message
-    {
+    fn from(req: RequestMessage<C>) -> Message {
         req.msg
     }
 }
@@ -421,8 +455,7 @@ impl<C> From<RequestMessage<C>> for Message {
 
 // Also implements Into<Value> for RequestMessage
 impl<C> From<RequestMessage<C>> for Value {
-    fn from(req: RequestMessage<C>) -> Value
-    {
+    fn from(req: RequestMessage<C>) -> Value {
         req.msg.into()
     }
 }
@@ -443,14 +476,16 @@ mod tests {
 
     // Third-party imports
 
+    use failure::Fail;
     use quickcheck::TestResult;
     use rmpv::{Utf8String, Value};
 
     // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage, value_type};
-    use core::request::{RequestMessage, RpcRequest};
-    use error::{RpcErrorKind, RpcResult};
+    use core::{value_type, CheckIntError, CodeConvert, CodeValueError,
+               Message, MessageType, RpcMessage};
+    use core::request::{RequestCodeError, RequestMessage, RpcRequest,
+                        ToRequestError};
 
     // --------------------
     // Helpers
@@ -495,8 +530,7 @@ mod tests {
     // --------------------
 
     #[test]
-    fn requestmessage_from_invalid_arraylen()
-    {
+    fn requestmessage_from_invalid_arraylen() {
         // --------------------
         // GIVEN
         // --------------------
@@ -515,7 +549,7 @@ mod tests {
         // WHEN
         // --------------------
         // RequestMessage::from is called with the message
-        let result: RpcResult<RequestMessage<TestEnum>>;
+        let result: Result<RequestMessage<TestEnum>, ToRequestError>;
         result = RequestMessage::from(msg);
 
         // --------------------
@@ -523,15 +557,8 @@ mod tests {
         // --------------------
         // Error is returned
         match result {
-            Err(e) => {
-                let errmsg = "expected array length of 4, got 3".to_string();
-                let expected =
-                    format!("Invalid message array length: {}", errmsg);
-                let res = match e.kind() {
-                    &RpcErrorKind::InvalidArrayLength(ref v) => v == &errmsg,
-                    _ => false,
-                };
-                assert!(res);
+            Err(e @ ToRequestError::ArrayLength(_)) => {
+                let expected = "expected array length of 4, got 3".to_string();
                 assert_eq!(e.to_string(), expected);
             }
             _ => assert!(false),
@@ -539,16 +566,14 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_invalid_messagetype()
-    {
+    fn requestmessage_from_invalid_messagetype() {
         // --------------------
         // GIVEN
         // --------------------
         // Message with MessageType::Notification
 
         // Create message
-        let expected = MessageType::Notification.to_number();
-        let msgtype = Value::from(expected);
+        let msgtype = Value::from(MessageType::Notification.to_number());
         let msgid = Value::from(42);
         let msgmeth = Value::from(TestEnum::One.to_number());
         let msgval = Value::from(42);
@@ -560,7 +585,7 @@ mod tests {
         // WHEN
         // --------------------
         // RequestMessage::from is called with the message
-        let result: RpcResult<RequestMessage<TestEnum>>;
+        let result: Result<RequestMessage<TestEnum>, ToRequestError>;
         result = RequestMessage::from(msg);
 
         // --------------------
@@ -568,35 +593,27 @@ mod tests {
         // --------------------
         // Error is returned
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidRequest => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 2);
-                        let cause = all_err[1];
+            Err(e @ ToRequestError::InvalidType(_)) => {
+                // Check top level error
+                let expected = "Invalid request message type".to_owned();
+                assert_eq!(e.to_string(), expected);
 
-                        // Compare cause message
-                        let errmsg = format!(
-                            "expected {} for message type (ie \
-                             MessageType::Request), got {}",
-                            MessageType::Request.to_number(),
-                            expected
-                        );
-                        let expected =
-                            format!("Invalid message type: {}", errmsg);
-                        assert_eq!(cause.to_string(), expected);
-                    }
-                    _ => assert!(false),
-                }
+                // Check the cause error
+                let expected_cause_msg = format!(
+                    "expected request message type value {}, got {}",
+                    MessageType::Request.to_number(),
+                    MessageType::Notification.to_number()
+                );
+
+                let cause = e.cause().unwrap();
+                assert_eq!(cause.to_string(), expected_cause_msg);
             }
             _ => assert!(false),
         }
     }
 
     #[test]
-    fn requestmessage_from_message_id_invalid_type()
-    {
+    fn requestmessage_from_message_id_invalid_type() {
         // --------------------
         // GIVEN
         // --------------------
@@ -615,7 +632,7 @@ mod tests {
         // WHEN
         // --------------------
         // RequestMessage::from is called with the message
-        let result: RpcResult<RequestMessage<TestEnum>>;
+        let result: Result<RequestMessage<TestEnum>, ToRequestError>;
         result = RequestMessage::from(msg);
 
         // --------------------
@@ -623,26 +640,28 @@ mod tests {
         // --------------------
         // Error is returned for the invalid message id
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidRequest => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 3);
-                        let next_err = all_err[1];
-                        let cause = all_err[2];
-
-                        // Compare next err message ie error generated by
-                        // check_message_id
-                        assert_eq!(next_err.to_string(), "Invalid request ID");
-
-                        // Compare cause message
-                        let errmsg = "expected u32 but got None";
-                        let expected = format!("Invalid type: {}", errmsg);
-                        assert_eq!(cause.to_string(), expected);
-                    }
+            Err(e1 @ ToRequestError::InvalidID(_)) => {
+                // Check cause error
+                match e1 {
+                    ToRequestError::InvalidID(
+                        CheckIntError::MissingValue { .. },
+                    ) => {}
                     _ => assert!(false),
                 }
+
+                // Check top msg
+                let expected = "Invalid request message id".to_owned();
+                assert_eq!(e1.to_string(), expected);
+
+                // Get cause error
+                let val = match e1.cause() {
+                    Some(e2) => {
+                        assert!(e2.cause().is_none());
+                        e2.to_string() == "Expected u32 but got None".to_owned()
+                    }
+                    _ => false,
+                };
+                assert!(val);
             }
             _ => assert!(false),
         }
@@ -661,18 +680,18 @@ mod tests {
 
             // Create message
             let msgtype = Value::from(MessageType::Request.to_number());
-            let msgid = Value::from(msgid);
+            let reqid = Value::from(msgid);
             let msgmeth = Value::from(TestEnum::One.to_number());
             let msgval = Value::from(42);
 
-            let val = Value::Array(vec![msgtype, msgid.clone(), msgmeth, msgval]);
+            let val = Value::Array(vec![msgtype, reqid, msgmeth, msgval]);
             let msg = Message::from(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
             // RequestMessage::from is called with the message
-            let result: RpcResult<RequestMessage<TestEnum>>;
+            let result: Result<RequestMessage<TestEnum>, ToRequestError>;
             result = RequestMessage::from(msg);
 
             // --------------------
@@ -680,32 +699,15 @@ mod tests {
             // --------------------
             // Error is returned for the invalid message id value
             let res = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequest => {
-                            // Get cause
-                            let all_err: Vec<_> = e.iter().collect();
-                            let numerror = all_err.len() == 3;
-                            // assert!(numerror);
-                            let next_err = all_err[1];
-                            let cause = all_err[2];
+                Err(e @ ToRequestError::InvalidID(_)) => {
+                    assert_eq!(e.to_string(), "Invalid request message id".to_owned());
 
-                            // Compare next err message ie error generated by
-                            // check_message_id
-                            let next_errmsg = next_err.to_string() == "Invalid message id type";
-                            // assert!(next_errmsg);
-
-                            // Compare cause message
-                            let errmsg = format!("expected value <= {} but got value {}",
-                                                 u32::max_value().to_string(),
-                                                 msgid.to_string());
-                            let expected = format!("Invalid type: {}", errmsg);
-                            let cause_errmsg = cause.to_string() == expected;
-                            // assert!(cause_errmsg);
-                            numerror && next_errmsg && cause_errmsg
-                        }
-                        _ => false
-                    }
+                    // Get cause error
+                    let expected = format!("Expected value <= {} but got \
+                                            value {}",
+                                            u32::max_value(),
+                                            msgid);
+                    e.cause().unwrap().to_string() == expected
                 }
                 _ => false
             };
@@ -714,8 +716,7 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_message_method_invalid_type()
-    {
+    fn requestmessage_from_message_method_invalid_type() {
         // --------------------
         // GIVEN
         // --------------------
@@ -734,7 +735,7 @@ mod tests {
         // WHEN
         // --------------------
         // RequestMessage::from is called with the message
-        let result: RpcResult<RequestMessage<TestEnum>>;
+        let result: Result<RequestMessage<TestEnum>, ToRequestError>;
         result = RequestMessage::from(msg);
 
         // --------------------
@@ -742,32 +743,20 @@ mod tests {
         // --------------------
         // Error is returned for the invalid message method
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidRequest => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 3);
-                        let next_err = all_err[1];
-                        let cause = all_err[2];
+            Err(e @ ToRequestError::InvalidCode(_)) => {
+                // Check top level error message
+                let expected = "Invalid request message code".to_owned();
+                assert_eq!(e.to_string(), expected);
 
-                        // Compare next err message ie error generated by
-                        // check_message_method
-                        assert_eq!(
-                            next_err.to_string(),
-                            format!(
-                                "Invalid request method: {}",
-                                "invalid value for method"
-                            )
-                        );
+                // Check specific code error
+                let code_err = e.cause().unwrap();
+                let expected = "Invalid request code value".to_owned();
+                assert_eq!(code_err.to_string(), expected);
 
-                        // Compare cause message
-                        let errmsg = "expected a value but got None";
-                        let expected = format!("Invalid type: {}", errmsg);
-                        assert_eq!(cause.to_string(), expected);
-                    }
-                    _ => assert!(false),
-                }
+                // Check cause error
+                let cause = code_err.cause().unwrap();
+                let expected = "Expected a value but got None".to_string();
+                assert_eq!(cause.to_string(), expected);
             }
             _ => assert!(false),
         }
@@ -797,7 +786,7 @@ mod tests {
             // WHEN
             // --------------------
             // RequestMessage::from is called with the message
-            let result: RpcResult<RequestMessage<TestEnum>>;
+            let result: Result<RequestMessage<TestEnum>, ToRequestError>;
             result = RequestMessage::from(msg);
 
             // --------------------
@@ -805,32 +794,34 @@ mod tests {
             // --------------------
             // Error is returned for the invalid message method value
             let res = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequest => {
-                            // Get cause
-                            let all_err: Vec<_> = e.iter().collect();
-                            let numerror = all_err.len() == 3;
-                            let next_err = all_err[1];
-                            let cause = all_err[2];
-
-                            // Compare next err message ie error generated by
-                            // check_message_method
-                            let next_errmsg = "Invalid request method: \
-                                               invalid value for method";
-                            let next_errmsg =
-                                next_err.to_string() == next_errmsg;
-
-                            // Compare cause message
-                            let errmsg = format!("expected value <= {} but got value {}",
-                                                 u8::max_value().to_string(),
-                                                 msgmeth.to_string());
-                            let expected = format!("Invalid type: {}", errmsg);
-                            let cause_errmsg = cause.to_string() == expected;
-                            numerror && next_errmsg && cause_errmsg
-                        }
-                        _ => false
+                Err(e @ ToRequestError::InvalidCode(_)) => {
+                    // Confirm type of code error
+                    match e {
+                        ToRequestError::InvalidCode(
+                            RequestCodeError::InvalidValue(_)
+                        ) => {}
+                       _ => return TestResult::from_bool(false),
                     }
+
+                    // Check top level error message
+                    let expected = "Invalid request message code".to_owned();
+                    assert_eq!(e.to_string(), expected);
+
+                    // Check specific code error
+                    let code_err = e.cause().unwrap();
+                    let expected = "Invalid request code value".to_owned();
+                    assert_eq!(code_err.to_string(), expected);
+
+                    // Check cause error
+                    let cause = code_err.cause().unwrap();
+                    let expected = format!("Expected value <= {} but got \
+                                            value {}",
+                                            u8::max_value(),
+                                            msgmeth.to_string());
+                    // No more errors
+                    assert!(cause.cause().is_none());
+
+                    cause.to_string() == expected
                 }
                 _ => false
             };
@@ -860,39 +851,41 @@ mod tests {
             // WHEN
             // --------------------
             // RequestMessage::from is called with the message
-            let result: RpcResult<RequestMessage<TestEnum>>;
+            let result: Result<RequestMessage<TestEnum>, ToRequestError>;
             result = RequestMessage::from(msg);
 
             // --------------------
             // THEN
             // --------------------
             let res = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequest => {
-                            // Get cause
-                            let all_err: Vec<_> = e.iter().collect();
-                            let numerror = all_err.len() == 3;
-                            let next_err = all_err[1];
-                            let cause = all_err[2];
-
-                            // Compare next err message ie error generated by
-                            // check_message_method
-                            let next_errmsg = "Invalid request method: \
-                                               invalid value for method";
-                            let next_errmsg =
-                                next_err.to_string() == next_errmsg;
-
-                            // Compare cause message
-                            let errmsg = format!("expected value <= {} but got value {}",
-                                                 TestEnum::max_number().to_string(),
-                                                 msgmeth.to_string());
-                            let expected = format!("Invalid type: {}", errmsg);
-                            let cause_errmsg = cause.to_string() == expected;
-                            numerror && next_errmsg && cause_errmsg
-                        }
-                        _ => false
+                Err(e @ ToRequestError::InvalidCode(_)) => {
+                    // Confirm type of code error
+                    match e {
+                        ToRequestError::InvalidCode(
+                            RequestCodeError::InvalidValue(_)
+                        ) => {}
+                       _ => return TestResult::from_bool(false),
                     }
+
+                    // Check top level error message
+                    let expected = "Invalid request message code".to_owned();
+                    assert_eq!(e.to_string(), expected);
+
+                    // Check specific code error
+                    let code_err = e.cause().unwrap();
+                    let expected = "Invalid request code value".to_owned();
+                    assert_eq!(code_err.to_string(), expected);
+
+                    // Check cause error
+                    let cause = code_err.cause().unwrap();
+                    let expected = format!("Expected value <= {} but got \
+                                            value {}",
+                                            TestEnum::max_number(),
+                                            msgmeth.to_string());
+                    // No more errors
+                    assert!(cause.cause().is_none());
+
+                    cause.to_string() == expected
                 }
                 _ => false
             };
@@ -901,8 +894,7 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_message_args_invalid_type()
-    {
+    fn requestmessage_from_message_args_invalid_type() {
         // --------------------
         // GIVEN
         // --------------------
@@ -921,7 +913,7 @@ mod tests {
         // WHEN
         // --------------------
         // RequestMessage::from is called with the message
-        let result: RpcResult<RequestMessage<TestEnum>>;
+        let result: Result<RequestMessage<TestEnum>, ToRequestError>;
         result = RequestMessage::from(msg);
 
         // --------------------
@@ -929,26 +921,18 @@ mod tests {
         // --------------------
         // Error is returned for the invalid message args
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidRequest => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 2);
-                        let cause = all_err[1];
+            Err(e @ ToRequestError::InvalidArgs(_)) => {
+                // Check top level error
+                let expected = "Invalid request message arguments".to_owned();
+                assert_eq!(e.to_string(), expected);
 
-                        // Compare cause message
-                        let errmsg = format!(
-                            "expected array for request arguments \
-                             but got {}",
-                            value_type(&msgval)
-                        );
-                        let expected =
-                            format!("Invalid request arguments: {}", errmsg);
-                        assert_eq!(cause.to_string(), expected);
-                    }
-                    _ => assert!(false),
-                }
+                // Check cause error
+                let cause = e.cause().unwrap();
+                let expected = format!(
+                    "Expected array for request arguments but got {}",
+                    value_type(&msgval)
+                );
+                assert_eq!(cause.to_string(), expected);
             }
             _ => assert!(false),
         }
@@ -959,8 +943,7 @@ mod tests {
     // --------------------
 
     #[test]
-    fn rpcmessage_as_vec()
-    {
+    fn rpcmessage_as_vec() {
         // --------------------
         // GIVEN
         // --------------------
@@ -992,8 +975,7 @@ mod tests {
     }
 
     #[test]
-    fn rpcmessage_as_value()
-    {
+    fn rpcmessage_as_value() {
         // --------------------
         // GIVEN
         // --------------------
@@ -1029,8 +1011,7 @@ mod tests {
     // --------------------
 
     #[test]
-    fn rpcrequest_message_id()
-    {
+    fn rpcrequest_message_id() {
         // --------------------
         // GIVEN
         // --------------------
@@ -1062,8 +1043,7 @@ mod tests {
     }
 
     #[test]
-    fn rpcrequest_message_method()
-    {
+    fn rpcrequest_message_method() {
         // --------------------
         // GIVEN
         // --------------------
@@ -1096,8 +1076,7 @@ mod tests {
     }
 
     #[test]
-    fn rpcrequest_message_args()
-    {
+    fn rpcrequest_message_args() {
         // --------------------
         // GIVEN
         // --------------------

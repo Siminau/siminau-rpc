@@ -139,8 +139,6 @@ use rmpv::Value;
 
 // Local imports
 
-use error::{RpcErrorKind, RpcResult, RpcResultExt};
-
 
 // ===========================================================================
 // Helpers
@@ -148,8 +146,7 @@ use error::{RpcErrorKind, RpcResult, RpcResultExt};
 
 
 // Return the name of a Value variant
-pub fn value_type(arg: &Value) -> String
-{
+pub fn value_type(arg: &Value) -> String {
     let ret = match *arg {
         Value::Nil => "nil",
         Value::Boolean(_) => "bool",
@@ -166,6 +163,16 @@ pub fn value_type(arg: &Value) -> String
 }
 
 
+#[derive(Debug, Fail)]
+pub enum CheckIntError {
+    #[fail(display = "Expected {} but got None", expected)]
+    MissingValue { expected: String },
+
+    #[fail(display = "Expected value <= {} but got value {}", max_value, value)]
+    ValueTooBig { max_value: u64, value: String },
+}
+
+
 /// Check if an unsigned integer value can be cast as a given integer type.
 ///
 /// # Errors
@@ -173,29 +180,19 @@ pub fn value_type(arg: &Value) -> String
 /// If the value is either None or a value that cannot fit into the type
 /// specified by `expected`, then the RpcErrorKind::TypeError error
 /// is returned.
-pub fn check_int(val: Option<u64>, max_value: u64, expected: String)
-    -> RpcResult<u64>
-{
+pub fn check_int(
+    val: Option<u64>, max_value: u64, expected: String
+) -> Result<u64, CheckIntError> {
     match val {
-        None => {
-            let errmsg = format!(
-                "expected {} but got {}",
-                expected,
-                String::from("None")
-            );
-            Err(RpcErrorKind::TypeError(errmsg).into())
+        None => Err(CheckIntError::MissingValue { expected: expected }),
+        Some(v) if v > max_value => {
+            let e = CheckIntError::ValueTooBig {
+                max_value: max_value,
+                value: v.to_string(),
+            };
+            Err(e)
         }
-        Some(v) => {
-            if v > max_value {
-                let errmsg = format!(
-                    "expected value <= {} but got value {}",
-                    max_value.to_string(),
-                    v.to_string()
-                );
-                bail!(RpcErrorKind::TypeError(errmsg))
-            }
-            Ok(v)
-        }
+        Some(v) => Ok(v),
     }
 }
 
@@ -203,6 +200,13 @@ pub fn check_int(val: Option<u64>, max_value: u64, expected: String)
 // ===========================================================================
 // CodeConvert
 // ===========================================================================
+
+
+#[derive(Fail, Debug)]
+#[fail(display = "Unknown code value: {}", code)]
+pub struct CodeValueError {
+    pub code: u64,
+}
 
 
 /// Allows converting between a number and a type.
@@ -224,10 +228,10 @@ pub trait CodeConvert<T>: Clone + PartialEq {
     type int_type;
 
     /// Convert a number to type T.
-    fn from_number(num: Self::int_type) -> RpcResult<T>;
+    fn from_number(num: Self::int_type) -> Result<T, CodeValueError>;
 
     /// Convert a u64 to type T.
-    fn from_u64(num: u64) -> RpcResult<T>;
+    fn from_u64(num: u64) -> Result<T, CodeValueError>;
 
     /// Convert type T to a number.
     fn to_number(&self) -> Self::int_type;
@@ -276,21 +280,17 @@ pub trait RpcMessage {
     fn as_value(&self) -> &Value;
 
     /// Return the message's type.
-    fn message_type(&self) -> MessageType
-    {
+    fn message_type(&self) -> MessageType {
         let msgtype: u8 = match self.as_vec()[0].as_u64() {
             Some(v) => v as u8,
             None => unreachable!(),
         };
-        MessageType::from_number(msgtype).expect(&format!(
-            "bad msgtype? {}",
-            msgtype
-        ))
+        MessageType::from_number(msgtype)
+            .expect(&format!("bad msgtype? {}", msgtype))
     }
 
     /// Return the string name of an [`rmpv::Value`] object.
-    fn value_type_name(arg: &Value) -> String
-    {
+    fn value_type_name(arg: &Value) -> String {
         value_type(arg)
     }
 }
@@ -317,15 +317,26 @@ pub struct Message {
 
 
 impl RpcMessage for Message {
-    fn as_vec(&self) -> &Vec<Value>
-    {
+    fn as_vec(&self) -> &Vec<Value> {
         self.msg.as_array().unwrap()
     }
 
-    fn as_value(&self) -> &Value
-    {
+    fn as_value(&self) -> &Value {
         &self.msg
     }
+}
+
+
+// Message errors
+#[derive(Debug, Fail)]
+pub enum ToMessageError {
+    #[fail(display = "expected array length of either 3 or 4, got {}", _0)]
+    ArrayLength(usize),
+
+    #[fail(display = "Invalid message type")]
+    InvalidType(#[cause] CheckIntError),
+
+    #[fail(display = "expected array but got {}", _0)] NotArray(String),
 }
 
 
@@ -341,16 +352,11 @@ impl Message {
     /// 3. The array's first item is not a u8
     /// 4. The array's first item is a value greater than the maximum value
     ///    stored in the MessageType enum
-    pub fn from(val: Value) -> RpcResult<Self>
-    {
+    pub fn from(val: Value) -> Result<Self, ToMessageError> {
         if let Some(array) = val.as_array() {
             let arraylen = array.len();
             if arraylen < 3 || arraylen > 4 {
-                let errmsg = format!(
-                    "expected array length of either 3 or 4, got {}",
-                    arraylen
-                );
-                bail!(RpcErrorKind::InvalidArrayLength(errmsg))
+                return Err(ToMessageError::ArrayLength(arraylen));
             }
 
             // Check msg type
@@ -358,13 +364,12 @@ impl Message {
                 array[0].as_u64(),
                 MessageType::max_number() as u64,
                 array[0].as_u64().unwrap().to_string(),
-            ).chain_err(|| {
-                RpcErrorKind::InvalidMessageType("check_int error".to_string())
-            })?;
+            ).map_err(|e| ToMessageError::InvalidType(e))?;
         } else {
-            let errmsg = format!("expected array but got {}", value_type(&val));
-            bail!(RpcErrorKind::InvalidMessage(errmsg))
+            return Err(ToMessageError::NotArray(value_type(&val)));
         }
+
+        // Return Message object
         Ok(Self { msg: val })
     }
 }
@@ -372,21 +377,20 @@ impl Message {
 
 // Clone impl
 impl Clone for Message {
-    fn clone(&self) -> Self
-    {
-        Self { msg: self.msg.clone() }
+    fn clone(&self) -> Self {
+        Self {
+            msg: self.msg.clone(),
+        }
     }
 
-    fn clone_from(&mut self, source: &Self)
-    {
+    fn clone_from(&mut self, source: &Self) {
         self.msg = source.as_value().clone();
     }
 }
 
 
 impl From<Message> for Value {
-    fn from(msg: Message) -> Value
-    {
+    fn from(msg: Message) -> Value {
         msg.msg
     }
 }
@@ -405,14 +409,15 @@ mod tests {
 
     // Third-party imports
 
+    use failure::Fail;
     use quickcheck::TestResult;
     use rmpv::Value;
 
     // Local imports
 
-    use super::{CodeConvert, Message, MessageType, RpcMessage};
-    use super::{check_int, value_type};
-    use error::RpcErrorKind;
+    use super::{check_int, value_type, CheckIntError};
+    use super::{CodeConvert, CodeValueError, Message, MessageType, RpcMessage,
+                ToMessageError};
 
     // --------------------
     // Decode tests
@@ -449,17 +454,14 @@ mod tests {
             if xs < 3 {
                 return TestResult::discard()
             }
-            match MessageType::from_number(xs) {
-                Err(c) => {
-                    let errmsg = format!("Invalid value: {}", xs);
-                    let res = match c.kind() {
-                        &RpcErrorKind::ValueError(ref v) => v == &xs.to_string(),
-                        _ => false,
-                    };
-                    TestResult::from_bool(res && c.to_string() == errmsg)
-                },
-                Ok(_) => TestResult::from_bool(false)
-            }
+            let val = match MessageType::from_number(xs) {
+                Err(e @ CodeValueError { .. }) => {
+                    let errmsg = format!("Unknown code value: {}", xs);
+                    e.to_string() == errmsg
+                }
+                Ok(_) => false,
+            };
+            TestResult::from_bool(val)
         }
     }
 
@@ -492,8 +494,7 @@ mod tests {
     // --------------------
 
     // Helper
-    fn mkmessage(msgtype: u8) -> Message
-    {
+    fn mkmessage(msgtype: u8) -> Message {
         let msgtype = Value::from(msgtype);
         let msgid = Value::from(0);
         let msgcode = Value::from(0);
@@ -507,16 +508,13 @@ mod tests {
     quickcheck! {
         // val == None always returns an err with given marker
         fn check_int_none_val(xs: u64) -> bool {
-            let errmsg = "expected u8 but got None";
-            let expected = format!("Invalid type: {}", errmsg);
-            if let Err(e) = check_int(None, xs, String::from("u8")) {
-                let res = match e.kind() {
-                    &RpcErrorKind::TypeError(ref msg) => msg == &errmsg,
-                    _ => false
-                };
-                res && e.to_string() == expected
-            } else {
-                false
+            let errmsg = "Expected u8 but got None";
+            match check_int(None, xs, "u8".to_owned()) {
+                Err(e @ CheckIntError::MissingValue { .. }) => {
+                    let msg = e.to_string();
+                    &msg[..] == errmsg
+                }
+                _ => false
             }
         }
 
@@ -526,19 +524,17 @@ mod tests {
                 return TestResult::discard()
             }
 
-            let errmsg = format!("expected value <= {} but got value {}",
+            let errmsg = format!("Expected value <= {} but got value {}",
                                  max_value, val);
-            let expected = format!("Invalid type: {}", errmsg);
             let result = check_int(Some(val), max_value, val.to_string());
-            if let Err(e) = result {
-                let res = match e.kind() {
-                    &RpcErrorKind::TypeError(ref msg) => msg == &errmsg,
-                    _ => false
-                };
-                TestResult::from_bool(res && e.to_string() == expected)
-            } else {
-                TestResult::from_bool(false)
-            }
+            let val = match result {
+                Err(e @ CheckIntError::ValueTooBig { .. }) => {
+                    let msg = e.to_string();
+                    msg == errmsg
+                }
+                _ => false,
+            };
+            TestResult::from_bool(val)
         }
 
         // val <= max returns value
@@ -625,8 +621,7 @@ mod tests {
 
     // Message::message
     #[test]
-    fn message_message_value()
-    {
+    fn message_message_value() {
         let v = Value::from(vec![Value::from(42)]);
         let expected = v.clone();
         let m = Message { msg: v };
@@ -639,8 +634,7 @@ mod tests {
     // Vec<Value> instead of using the from function
     #[test]
     #[should_panic]
-    fn message_as_vec_panic()
-    {
+    fn message_as_vec_panic() {
         let v = Value::from(Value::from(42));
         let m = Message { msg: v };
         m.as_vec();
@@ -648,8 +642,7 @@ mod tests {
 
     // Message::raw_message
     #[test]
-    fn message_as_value()
-    {
+    fn message_as_value() {
         let v = Value::from(42);
         let expected = v.clone();
         let msg = Message { msg: v };
@@ -658,19 +651,11 @@ mod tests {
 
     // If a non-Value::Array is stored then will always return an error
     #[test]
-    fn message_from_non_array_always_err()
-    {
+    fn message_from_non_array_always_err() {
         let v = Value::from(42);
         let errmsg = format!("expected array but got {}", value_type(&v));
-        let expected = format!("Invalid message: {}", errmsg);
         let ret = match Message::from(v) {
-            Err(e) => {
-                let res = match e.kind() {
-                    &RpcErrorKind::InvalidMessage(ref msg) => msg == &errmsg,
-                    _ => false,
-                };
-                res && e.to_string() == expected
-            }
+            Err(e @ ToMessageError::NotArray(_)) => errmsg == e.to_string(),
             _ => false,
         };
         assert!(ret)
@@ -691,25 +676,19 @@ mod tests {
 
             // WHEN
             // creating a message using from method
-            let errmsg = format!("expected array length of either 3 or 4, got {}",
-                                 arraylen);
-            let expected = format!("Invalid message array length: {}", errmsg);
-            let result = match Message::from(array) {
-                Err(e) => {
-                    let res = match e.kind() {
-                        &RpcErrorKind::InvalidArrayLength(ref msg) => {
-                            msg == &errmsg
-                        },
-                        _ => false
-                    };
-                    res && e.to_string() == expected
-                },
-                _ => false
-            };
+            let result = Message::from(array);
 
             // THEN
             // an appropriate error is returned
-            TestResult::from_bool(result)
+            let errmsg = format!("expected array length of either 3 or 4, got {}",
+                                 arraylen);
+            let val = match result {
+                Err(e @ ToMessageError::ArrayLength(_)) => {
+                    errmsg == e.to_string()
+                },
+                _ => false
+            };
+            TestResult::from_bool(val)
         }
 
         fn message_from_invalid_messagetype_number(code: u64) -> TestResult {
@@ -726,42 +705,39 @@ mod tests {
 
             // WHEN
             // creating a message via Message::from()
-            let cause_errmsg = format!("expected value <= 2 but got value {}", code);
-            let cause_expected = format!("Invalid type: {}", cause_errmsg);
-            let result = match Message::from(Value::from(array)) {
-                Err(e) => {
-
-                    // 2 errors were generated
-                    let all_err: Vec<_> = e.iter().collect();
-                    let two_errors = all_err.len() == 2;
-
-                    // The top-most error
-                    let top_err = match e.kind() {
-                        &RpcErrorKind::InvalidMessageType(ref msg) => msg == "check_int error",
-                        _ => false
-                    };
-                    let top_msg = e.to_string() == String::from("Invalid message type: check_int error");
-
-                    // The error that caused the top-most error
-                    let cause = all_err[1].to_string() == cause_expected;
-
-                    // All expected conditions must be true
-                    two_errors && top_err && top_msg && cause
-                }
-                _ => false
-            };
+            let cause_errmsg = format!("Expected value <= 2 but got value {}", code);
+            let result = Message::from(Value::from(array));
 
             // THEN
             // MessageError::InvalidType error is returned
-            TestResult::from_bool(result)
+            let val = match result {
+                Err(e @ ToMessageError::InvalidType(_)) => {
+
+                    // Check error
+                    let ret = e.to_string() == "Invalid message type";
+
+                    // Get cause error
+                    let cause = e.cause().unwrap();
+
+                    // No further causes
+                    let ret = ret && cause.cause().is_none();
+
+                    // Check cause message
+                    let expected = cause.to_string() == cause_errmsg;
+
+                    // Return result of checks
+                    ret && expected
+                }
+                _ => false
+            };
+            TestResult::from_bool(val)
         }
     }
 
     // A valid value is an array with a length of 3 or 4 and the first item in
     // the array is u8 that is < 3
     #[test]
-    fn message_from_valid_value()
-    {
+    fn message_from_valid_value() {
         let valvec: Vec<Value> = vec![1, 42, 42]
             .iter()
             .map(|v| Value::from(v.clone()))

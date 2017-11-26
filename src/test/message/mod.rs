@@ -139,7 +139,7 @@ mod responsebuilder {
                 // WHEN
                 // ResponseBuilder::version() is called w/ the version number
                 // --------------------
-                let result = builder.version(num);
+                let msg = builder.version(num);
 
                 // --------------------
                 // THEN
@@ -148,14 +148,9 @@ mod responsebuilder {
                 // the response's code == ResponseCode::Version and
                 // the response's result is the version number
                 // --------------------
-                let val = match result {
-                    Ok(msg) => {
-                        msg.message_id() == req.message_id() &&
-                            msg.error_code() == ResponseCode::Version &&
-                            msg.result().as_u64().unwrap() == num as u64
-                    }
-                    Err(_) => unreachable!()
-                };
+                let val = msg.message_id() == req.message_id() &&
+                    msg.error_code() == ResponseCode::Version &&
+                    msg.result().as_u64().unwrap() == num as u64;
 
                 TestResult::from_bool(val)
             }

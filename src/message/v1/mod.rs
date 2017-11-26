@@ -24,15 +24,15 @@ mod util;
 
 // Local imports
 
-use core::CodeConvert;
+use core::{CodeConvert, CodeValueError};
 use core::request::RequestMessage;
 use core::response::ResponseMessage;
-use error::{RpcErrorKind, RpcResult};
 
 // Re-exports
-pub use self::requestbuilder::{request, RequestBuilder};
-pub use self::responsebuilder::{response, ResponseBuilder};
-pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode};
+pub use self::requestbuilder::{request, BuildRequestError, RequestBuilder};
+pub use self::responsebuilder::{response, BuildResponseError, ResponseBuilder};
+pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode,
+                     OpenModeError};
 
 
 // ===========================================================================
@@ -41,7 +41,8 @@ pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode};
 
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum RequestCode {
+pub enum RequestCode
+{
     // Setup client authentication file.
     //
     // 3 arguments:
@@ -140,7 +141,8 @@ pub enum RequestCode {
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum ResponseCode {
+pub enum ResponseCode
+{
     // Auth init succeeded
     //
     // Single argument:

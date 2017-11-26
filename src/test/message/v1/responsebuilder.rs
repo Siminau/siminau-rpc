@@ -30,8 +30,8 @@ mod auth {
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use error::RpcErrorKind;
-    use message::v1::{request, response, FileID, FileKind, ResponseCode};
+    use message::v1::{request, response, BuildResponseError, FileID, FileKind,
+                      ResponseCode};
 
     #[test]
     fn invalid_fileid()
@@ -58,11 +58,13 @@ mod auth {
         // an error is returned
         // --------------------
         let val = match result {
-            Err(e) => if let &RpcErrorKind::Msg(ref m) = e.kind() {
-                &m[..] == "id contains invalid FileKind"
-            } else {
-                false
-            },
+            Err(e @ BuildResponseError::Auth(_)) => {
+                let expected = format!("Unable to build auth response \
+                                        message: file id has invalid \
+                                        kind {}",
+                                       fileid.kind.bits());
+                e.to_string() == expected
+            }
             _ => false,
         };
         assert!(val);
@@ -168,16 +170,13 @@ mod auth {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestMethod(ref s) => {
-                            &s[..] == "expected RequestCode::Auth, got \
-                                       RequestCode::Flush instead"
-                        }
-                        _ => true,
-                    }
+                Err(e @ BuildResponseError::WrongCode { .. }) => {
+                    let expected = "Unable to build response message: \
+                                    expected RequestCode::Auth, got \
+                                    RequestCode::Flush instead";
+                    e.to_string() == expected.to_owned()
                 }
-                Ok(_) => false,
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -194,8 +193,7 @@ mod flush {
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use error::RpcErrorKind;
-    use message::v1::{request, response, ResponseCode};
+    use message::v1::{request, response, BuildResponseError, ResponseCode};
 
     #[test]
     fn valid_message_id()
@@ -277,20 +275,19 @@ mod flush {
         // an error is returned
         // --------------------
         let val = match result {
-            Err(e) => match e.kind() {
-                &RpcErrorKind::InvalidRequestMethod(ref s) => {
-                    &s[..]
-                        == "expected RequestCode::Flush, got RequestCode::Auth \
-                            instead"
-                }
-                _ => true,
-            },
-            Ok(_) => false,
+            Err(e @ BuildResponseError::WrongCode { .. }) => {
+                let expected = "Unable to build response message: expected \
+                                RequestCode::Flush, got RequestCode::Auth \
+                                instead";
+                e.to_string() == expected.to_owned()
+            }
+            _ => false,
         };
 
         assert!(val);
     }
 }
+
 
 mod attach {
     // Third party imports
@@ -302,8 +299,8 @@ mod attach {
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use error::RpcErrorKind;
-    use message::v1::{request, response, FileID, FileKind, ResponseCode};
+    use message::v1::{request, response, BuildResponseError, FileID, FileKind,
+                      ResponseCode};
 
     #[test]
     fn invalid_fileid()
@@ -339,11 +336,13 @@ mod attach {
         // an error is returned
         // --------------------
         let val = match result {
-            Err(e) => if let &RpcErrorKind::ValueError(ref m) = e.kind() {
-                &m[..] == "rootdir server id contains invalid FileKind"
-            } else {
-                false
-            },
+            Err(e @ BuildResponseError::Attach(_)) => {
+                let expected = format!("Unable to build attach response \
+                                        message: rootfile_id has invalid \
+                                        kind {}",
+                                       fileid.kind.bits());
+                e.to_string() == expected
+            }
             _ => false,
         };
         assert!(val);
@@ -457,16 +456,13 @@ mod attach {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestMethod(ref s) => {
-                            &s[..] == "expected RequestCode::Attach, got \
-                                       RequestCode::Flush instead"
-                        }
-                        _ => true,
-                    }
+                Err(e @ BuildResponseError::WrongCode { .. }) => {
+                    let expected = "Unable to build response message: expected \
+                                    RequestCode::Attach, got \
+                                    RequestCode::Flush instead";
+                    e.to_string() == expected.to_owned()
                 }
-                Ok(_) => false,
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -485,8 +481,8 @@ mod walk {
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use error::RpcErrorKind;
-    use message::v1::{request, response, FileID, FileKind, ResponseCode};
+    use message::v1::{request, response, BuildResponseError, FileID, FileKind,
+                      ResponseCode};
 
     quickcheck! {
         fn has_invalid_fileid(path_id: Vec<u8>,
@@ -547,14 +543,14 @@ mod walk {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    if let &RpcErrorKind::ValueError(ref m) = e.kind() {
-                        *m == format!("item {} of path_id is an \
-                                       invalid FileID",
-                                       bad_index.unwrap())
-                    } else {
-                        false
-                    }
+                Err(e @ BuildResponseError::Walk { .. }) => {
+                    let index = bad_index.unwrap();
+                    let bad_kind = path[index].kind.bits();
+                    let expected = format!("Unable to build walk response \
+                                            message: item {} of path_id has \
+                                            invalid kind {}",
+                                           index, bad_kind);
+                    e.to_string() == expected.to_owned()
                 }
                 _ => false,
             };
@@ -685,16 +681,13 @@ mod walk {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidRequestMethod(ref s) => {
-                            &s[..] == "expected RequestCode::Walk, got \
-                                       RequestCode::Flush instead"
-                        }
-                        _ => true,
-                    }
+                Err(e @ BuildResponseError::WrongCode { .. }) => {
+                    let expected = "Unable to build response message: \
+                                    expected RequestCode::Walk, got \
+                                    RequestCode::Flush instead";
+                    e.to_string() == expected.to_owned()
                 }
-                Ok(_) => false,
+                _ => false,
             };
 
             TestResult::from_bool(val)
@@ -712,9 +705,8 @@ mod open {
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use error::RpcErrorKind;
-    use message::v1::{request, response, FileID, FileKind, OpenMode,
-                      ResponseCode};
+    use message::v1::{request, response, BuildResponseError, FileID, FileKind,
+                      OpenMode, ResponseCode};
 
     quickcheck! {
         fn has_invalid_fileid(max_size: u32,
@@ -769,12 +761,12 @@ mod open {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    if let &RpcErrorKind::ValueError(ref m) = e.kind() {
-                        &m[..] == "file server id contains invalid FileKind"
-                    } else {
-                        false
-                    }
+                Err(e @ BuildResponseError::Open(_)) => {
+                    let expected = format!("Unable to build open response \
+                                            message: file id has invalid \
+                                            kind {}",
+                                           fileid.kind.bits());
+                    e.to_string() == expected.to_owned()
                 }
                 _ => false,
             };
@@ -887,9 +879,8 @@ mod create {
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use error::RpcErrorKind;
-    use message::v1::{request, response, FileID, FileKind, OpenMode,
-                      ResponseCode};
+    use message::v1::{request, response, BuildResponseError, FileID, FileKind,
+                      OpenMode, ResponseCode};
 
     // Helpers
     use test::message::v1::invalid_string;
@@ -954,12 +945,12 @@ mod create {
             // an error is returned
             // --------------------
             let val = match result {
-                Err(e) => {
-                    if let &RpcErrorKind::ValueError(ref m) = e.kind() {
-                        &m[..] == "file server id contains invalid FileKind"
-                    } else {
-                        false
-                    }
+                Err(e @ BuildResponseError::Create(_)) => {
+                    let expected = format!("Unable to build create response \
+                                            message: file id has invalid \
+                                            kind {}",
+                                           fileid.kind.bits());
+                    e.to_string() == expected.to_owned()
                 }
                 _ => false,
             };

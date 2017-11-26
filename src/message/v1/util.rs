@@ -14,8 +14,7 @@
 
 // Local imports
 
-use core::CodeConvert;
-use error::{RpcErrorKind, RpcResult};
+use core::{CodeConvert, CodeValueError};
 
 // ===========================================================================
 // Server File ID
@@ -34,7 +33,8 @@ bitflags! {
 }
 
 
-impl FileKind {
+impl FileKind
+{
     pub fn is_valid(&self) -> bool
     {
         let invalid = vec![
@@ -49,14 +49,16 @@ impl FileKind {
 
 
 #[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
-pub struct FileID {
+pub struct FileID
+{
     pub kind: FileKind,
     pub version: u32,
     pub path: u64,
 }
 
 
-impl FileID {
+impl FileID
+{
     pub fn new(kind: FileKind, version: u32, path: u64) -> FileID
     {
         FileID {
@@ -73,7 +75,8 @@ impl FileID {
 }
 
 
-impl Default for FileID {
+impl Default for FileID
+{
     fn default() -> FileID
     {
         FileID::new(FileKind::FILE, 0, 0)
@@ -96,7 +99,8 @@ bitflags! {
 
 
 #[derive(Debug, PartialEq, Copy, Clone, CodeConvert)]
-pub enum OpenKind {
+pub enum OpenKind
+{
     Read = 0,
     Write = 1,
     ReadWrite = 2,
@@ -105,20 +109,29 @@ pub enum OpenKind {
 
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub struct OpenMode {
+pub struct OpenMode
+{
     mode: u8,
 }
 
 
-impl OpenMode {
+#[derive(Debug, Fail)]
+#[fail(display = "Invalid bits set: {:b}", bits)]
+pub struct OpenModeError
+{
+    bits: u8,
+}
+
+
+impl OpenMode
+{
     pub const INVALID_BITS: u8 = 0b00111100;
     const OPENKIND_BITS: u8 = 0b00000011;
 
-    pub fn from_bits(bits: u8) -> RpcResult<OpenMode>
+    pub fn from_bits(bits: u8) -> Result<OpenMode, OpenModeError>
     {
         if OpenMode::INVALID_BITS & bits != 0 {
-            let errmsg = format!("Invalid bits set: {:b}", bits);
-            bail!(RpcErrorKind::ValueError(errmsg));
+            return Err(OpenModeError { bits: bits });
         }
 
         let ret = OpenMode { mode: bits };
@@ -197,7 +210,8 @@ impl OpenMode {
 }
 
 
-impl Default for OpenMode {
+impl Default for OpenMode
+{
     fn default() -> OpenMode
     {
         OpenMode { mode: 0 }
@@ -205,12 +219,14 @@ impl Default for OpenMode {
 }
 
 
-pub struct OpenModeBuilder {
+pub struct OpenModeBuilder
+{
     open_mode: OpenMode,
 }
 
 
-impl Default for OpenModeBuilder {
+impl Default for OpenModeBuilder
+{
     fn default() -> OpenModeBuilder
     {
         OpenModeBuilder {
@@ -220,7 +236,8 @@ impl Default for OpenModeBuilder {
 }
 
 
-impl OpenModeBuilder {
+impl OpenModeBuilder
+{
     pub fn kind(mut self, val: OpenKind) -> OpenModeBuilder
     {
         self.open_mode.mode |= val as u8;

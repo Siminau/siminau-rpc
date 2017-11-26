@@ -45,7 +45,7 @@ use std::time::Duration;
 // Third-party imports
 
 use bytes::BytesMut;
-use futures::{Future, Sink, Stream, future};
+use futures::{future, Future, Sink, Stream};
 use futures::sync::mpsc;
 use rmpv::Value;
 use tokio_core::net::{TcpListener, TcpStream};
@@ -58,11 +58,10 @@ use tokio_service::{NewService, Service};
 // Local imports
 
 use siminau_rpc::codec::MsgPackCodec;
-use siminau_rpc::error::{RpcErrorKind, RpcResult};
-use siminau_rpc::core::{CodeConvert, Message};
-use siminau_rpc::core::request::{RequestMessage, RpcRequest};
+use siminau_rpc::core::{CodeConvert, CodeValueError, Message};
+use siminau_rpc::core::request::{RequestMessage, RpcRequest, ToRequestError};
 use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
-use siminau_rpc::server::{Server, ServerMessage, shutdown};
+use siminau_rpc::server::{shutdown, Server, ServerMessage};
 
 
 // ===========================================================================
@@ -105,8 +104,7 @@ pub struct RpcService<T> {
 
 
 impl<T> RpcService<T> {
-    pub fn new() -> Self
-    {
+    pub fn new() -> Self {
         Self { control: None }
     }
 }
@@ -118,11 +116,9 @@ impl Service for RpcService<ServerMessage> {
     type Error = io::Error;
     type Future = Box<Future<Item = Value, Error = io::Error>>;
 
-    fn call(&self, val: Self::Request) -> Self::Future
-    {
+    fn call(&self, val: Self::Request) -> Self::Future {
         // Convert Value into a Message
         let msg = match Message::from(val) {
-
             // Return error response if invalid message
             Err(e) => {
                 let msgid = 0;
@@ -139,15 +135,9 @@ impl Service for RpcService<ServerMessage> {
 
         // Convert Message into a Request
         let req = match Request::from(msg) {
-
             // Return error response if invalid request
-            Err(e) => {
-                let errcode = match e.kind() {
-                    &RpcErrorKind::InvalidRequestID => {
-                        ErrorResponse::InvalidRequestID
-                    }
-                    _ => ErrorResponse::InvalidRequest,
-                };
+            Err(e @ ToRequestError::InvalidID(_)) => {
+                let errcode = ErrorResponse::InvalidRequestID;
                 let msgid = 0;
                 let errmsg = Value::from(e.to_string());
                 let res = Response::new(msgid, errcode, errmsg);
@@ -157,6 +147,7 @@ impl Service for RpcService<ServerMessage> {
                 return Box::new(fut);
             }
             Ok(req) => req,
+            _ => unreachable!(),
         };
 
         // Return an ok response
@@ -177,13 +168,13 @@ impl Service for RpcService<ServerMessage> {
 
 
 impl ServiceWithShutdown<ServerMessage> for RpcService<ServerMessage> {
-    fn set_server_control(&mut self, s: mpsc::Sender<ServerMessage>, loop_handle: Handle)
-    {
+    fn set_server_control(
+        &mut self, s: mpsc::Sender<ServerMessage>, loop_handle: Handle
+    ) {
         self.control = Some((loop_handle, s));
     }
 
-    fn server_control(&self) -> Option<(Handle, mpsc::Sender<ServerMessage>)>
-    {
+    fn server_control(&self) -> Option<(Handle, mpsc::Sender<ServerMessage>)> {
         if let Some((ref h, ref tx)) = self.control {
             Some((h.clone(), tx.clone()))
         } else {
@@ -191,8 +182,7 @@ impl ServiceWithShutdown<ServerMessage> for RpcService<ServerMessage> {
         }
     }
 
-    fn shutdown(&self)
-    {
+    fn shutdown(&self) {
         // Request shutdown
         let control = self.server_control();
         if let Some((h, tx)) = control {
@@ -203,14 +193,17 @@ impl ServiceWithShutdown<ServerMessage> for RpcService<ServerMessage> {
 
 
 pub fn serve<S, I>(s: S) -> io::Result<()>
-    where S: NewService<Request=Value,
-                        Response=Value,
-                        Error=io::Error,
-                        Instance=I> + 'static,
-          I: Service<Request=S::Request,
-                     Response=S::Response,
-                     Error=S::Error> +
-             ServiceWithShutdown<ServerMessage> + 'static
+where
+    S: NewService<
+        Request = Value,
+        Response = Value,
+        Error = io::Error,
+        Instance = I,
+    >
+        + 'static,
+    I: Service<Request = S::Request, Response = S::Response, Error = S::Error>
+        + ServiceWithShutdown<ServerMessage>
+        + 'static,
 {
     // Create event loop
     let mut core = Core::new()?;
@@ -257,8 +250,7 @@ pub fn serve<S, I>(s: S) -> io::Result<()>
 }
 
 
-fn client() -> io::Result<String>
-{
+fn client() -> io::Result<String> {
     // Create event loop
     let mut core = Core::new()?;
     let handle = core.handle();
@@ -279,9 +271,9 @@ fn client() -> io::Result<String>
     let request = socket.and_then(|socket| write_all(socket, &buf[..]));
     let response = request.and_then(|(socket, _req)| {
         // Close socket's writer to prevent deadlock
-        socket.shutdown(Shutdown::Write).expect(
-            "Could not shutdown",
-        );
+        socket
+            .shutdown(Shutdown::Write)
+            .expect("Could not shutdown");
 
         // Read response from server into a buffer
         read_to_end(socket, Vec::new())
@@ -314,15 +306,13 @@ fn client() -> io::Result<String>
 
 
 #[test]
-fn expected_server_test()
-{
-
+fn expected_server_test() {
     // Start server
-    let child = thread::spawn(
-        move || if let Err(e) = serve(|| Ok(RpcService::new())) {
+    let child = thread::spawn(move || {
+        if let Err(e) = serve(|| Ok(RpcService::new())) {
             println!("Server failed with {}", e);
-        },
-    );
+        }
+    });
 
     thread::sleep(Duration::from_millis(500));
 

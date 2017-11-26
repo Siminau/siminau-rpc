@@ -16,7 +16,6 @@ use rmpv::Value;
 
 // Local imports
 
-use error::{RpcErrorKind, RpcResult};
 use util::is_printable;
 
 // Parent-module imports
@@ -24,41 +23,95 @@ use super::{OpenMode, Request, RequestCode};
 
 
 // ===========================================================================
-// Request builder
+// Helper
 // ===========================================================================
 
 
-pub struct RequestBuilder {
-    id: u32,
+#[derive(Debug, Fail)]
+pub enum CheckNameError
+{
+    #[fail(display = "{} is either empty, or contains control characters", _0)]
+    WSPrintable(String),
+
+    #[fail(display = "{} is either empty, contains whitespace, or contains \
+                      control characters",
+           _0)]
+    WSNotPrintable(String),
 }
 
 
-fn check_name(var: &str, name: &str, ws_printable: bool) -> RpcResult<()>
+fn check_name(
+    var: &str, name: &str, ws_printable: bool
+) -> Result<(), CheckNameError>
 {
     // Name must not be empty and must not have any control characters
     if !is_printable(name, ws_printable) {
-        let errmsg = if ws_printable {
-            format!(
-                "{} is either empty, or contains control characters: {}",
-                var,
-                name
-            )
+        let err = if ws_printable {
+            CheckNameError::WSPrintable(var.to_owned())
         } else {
-            format!(
-                "{} is either empty, contains whitespace, or contains control \
-                 characters: {}",
-                var,
-                name
-            )
+            CheckNameError::WSNotPrintable(var.to_owned())
         };
-        bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+        return Err(err);
     }
 
     Ok(())
 }
 
 
-impl RequestBuilder {
+// ===========================================================================
+// Request builder errors
+// ===========================================================================
+
+
+#[derive(Debug, Fail)]
+pub enum BuildAttachError
+{
+    #[fail(display = "Name error: {}", _0)] NameError(#[cause] CheckNameError),
+
+    #[fail(display = "Invalid rootdir_id value ({}): rootdir_id matches \
+                      authfile_id",
+           _0)]
+    MatchingID(u32),
+}
+
+
+#[derive(Debug, Fail)]
+pub enum BuildRequestError
+{
+    #[fail(display = "Unable to build auth request message")]
+    Auth(#[cause] CheckNameError),
+
+    #[fail(display = "Unable to build flush request message: prev msg id \
+                      ({}) matches current msg id",
+           _0)]
+    Flush(u32),
+
+    #[fail(display = "Unable to build attach request message")]
+    Attach(#[cause] BuildAttachError),
+
+    #[fail(display = "Unable to build walk request message: newfile_id ({}) \
+                      has the same value as file_id",
+           _0)]
+    Walk(u32),
+
+    #[fail(display = "Unable to build create request message")]
+    Create(#[cause] CheckNameError),
+}
+
+
+// ===========================================================================
+// Request builder
+// ===========================================================================
+
+
+pub struct RequestBuilder
+{
+    id: u32,
+}
+
+
+impl RequestBuilder
+{
     pub fn new(msgid: u32) -> RequestBuilder
     {
         RequestBuilder { id: msgid }
@@ -72,10 +125,12 @@ impl RequestBuilder {
     // 3. service name
     pub fn auth(
         self, authfile_id: u32, username: &str, fsname: &str
-    ) -> RpcResult<Request>
+    ) -> Result<Request, BuildRequestError>
     {
-        check_name("username", username, false)?;
-        check_name("filesystem name", fsname, false)?;
+        check_name("username", username, false)
+            .map_err(|e| BuildRequestError::Auth(e))?;
+        check_name("filesystem name", fsname, false)
+            .map_err(|e| BuildRequestError::Auth(e))?;
 
         // Create arguments
         let fileid = Value::from(authfile_id);
@@ -92,15 +147,10 @@ impl RequestBuilder {
     //
     // Single argument:
     // 1. message id of the previous request
-    pub fn flush(self, prev_msgid: u32) -> RpcResult<Request>
+    pub fn flush(self, prev_msgid: u32) -> Result<Request, BuildRequestError>
     {
         if prev_msgid == self.id {
-            let errmsg = format!(
-                "invalid argument ({}): prev msg id matches current \
-                 msg id",
-                prev_msgid
-            );
-            bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+            return Err(BuildRequestError::Flush(prev_msgid));
         }
 
         // Create argument
@@ -121,19 +171,19 @@ impl RequestBuilder {
     // 4. service name
     pub fn attach(
         self, rootdir_id: u32, authfile_id: u32, username: &str, fsname: &str
-    ) -> RpcResult<Request>
+    ) -> Result<Request, BuildRequestError>
     {
         if rootdir_id == authfile_id {
-            let errmsg = format!(
-                "invalid rootdir_id value ({}): rootdir_id and authfile_id \
-                 must have different id numbers",
-                rootdir_id
-            );
-            bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+            let err = BuildAttachError::MatchingID(rootdir_id);
+            return Err(BuildRequestError::Attach(err));
         }
 
-        check_name("username", username, false)?;
-        check_name("filesystem name", fsname, false)?;
+        check_name("username", username, false).map_err(|e| {
+            BuildRequestError::Attach(BuildAttachError::NameError(e))
+        })?;
+        check_name("filesystem name", fsname, false).map_err(|e| {
+            BuildRequestError::Attach(BuildAttachError::NameError(e))
+        })?;
 
         // Create request message
         let msgargs = vec![
@@ -156,16 +206,11 @@ impl RequestBuilder {
     // 3. list of path element strings to walk through
     pub fn walk(
         self, file_id: u32, newfile_id: u32, path: Vec<&str>
-    ) -> RpcResult<Request>
+    ) -> Result<Request, BuildRequestError>
     {
         // file_id cannot be the same value as newfile_id
         if file_id == newfile_id {
-            let errmsg = format!(
-                "invalid newfile_id value ({}): newfile_id \
-                 has the same value as file_id",
-                newfile_id
-            );
-            bail!(RpcErrorKind::InvalidRequestArgs(errmsg));
+            return Err(BuildRequestError::Walk(newfile_id));
         }
 
         // Convert Vec<&str> into Vec<Value>
@@ -206,9 +251,10 @@ impl RequestBuilder {
     // 3. mode ie type of I/O
     pub fn create(
         self, file_id: u32, filename: &str, mode: OpenMode
-    ) -> RpcResult<Request>
+    ) -> Result<Request, BuildRequestError>
     {
-        check_name("filename", filename, false)?;
+        check_name("filename", filename, false)
+            .map_err(|e| BuildRequestError::Create(e))?;
 
         // Construct msg args
         let msgargs = vec![

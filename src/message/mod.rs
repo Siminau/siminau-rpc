@@ -16,11 +16,10 @@ use rmpv::Value;
 
 // Local imports
 
-use core::CodeConvert;
+use core::{CodeConvert, CodeValueError};
 use core::notify::NotificationMessage;
 use core::request::{RequestMessage, RpcRequest};
 use core::response::ResponseMessage;
-use error::{RpcErrorKind, RpcResult};
 
 
 // ===========================================================================
@@ -146,20 +145,18 @@ impl<'request> ResponseBuilder<'request> {
         Response::new(msgid, ResponseCode::Error, errmsg)
     }
 
-    pub fn version(self, num: u32) -> RpcResult<Response>
+    pub fn version(self, num: u32) -> Response
     {
         let req = self.request;
         match req.message_method() {
-            RequestCode::Version => {}
-
             // If add any more variants to RequestCode, pls uncomment below
-            // _ => bail!(RpcErrorKind::InvalidRequest)
+            // _ => return BuildResponseError)
+            RequestCode::Version => {}
         }
 
         let num = Value::from(num);
         let msgid = req.message_id();
-        let ret = Response::new(msgid, ResponseCode::Version, num);
-        Ok(ret)
+        Response::new(msgid, ResponseCode::Version, num)
     }
 }
 

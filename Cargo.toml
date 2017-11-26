@@ -5,8 +5,11 @@ authors = ["Ariel De Ocampo <arielmakestuff@gmail.com>"]
 
 [dependencies]
 
+# Error deps
+failure = "0.1"
+failure_derive = "0.1"
+
 # General deps
-error-chain = "0.11"
 bitflags = "1"
 
 # MsgPack deps

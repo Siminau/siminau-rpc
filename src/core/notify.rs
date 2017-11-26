@@ -42,12 +42,10 @@
 //!
 //! use rmpv::Value;
 //!
-//! // Error types must be in scope in order for CodeConvert to work
-//! use siminau_rpc::error::{RpcErrorKind, RpcResult};
-//!
 //! // Message and notify types
-//! use siminau_rpc::core::{CodeConvert, Message, MessageType,
-//!                            RpcMessage};
+//! // Note: CodeValueError is needed for CodeConvert custom derive
+//! use siminau_rpc::core::{CodeConvert, CodeValueError, Message, MessageType,
+//!                         RpcMessage};
 //! use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
 //!
 //! // Define Error codes
@@ -98,9 +96,60 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{CodeConvert, Message, MessageType, RpcMessage, RpcMessageType,
-           check_int, value_type};
-use error::{RpcErrorKind, RpcResult, RpcResultExt};
+use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
+           MessageType, RpcMessage, RpcMessageType};
+
+
+// ===========================================================================
+// NotificationMessage errors
+// ===========================================================================
+
+
+#[derive(Debug, Fail)]
+#[fail(display = "Expected notification message type value {}, got {}",
+       expected_type, msgtype)]
+pub struct NoticeTypeError {
+    expected_type: u8,
+    msgtype: u8,
+}
+
+
+#[derive(Debug, Fail)]
+pub enum NoticeCodeError {
+    #[fail(display = "Invalid notification code value")]
+    InvalidValue(#[cause] CheckIntError),
+
+    #[fail(display = "Cannot cast {} into notification code value", _0)]
+    ToNumber(u64),
+
+    #[fail(display = "Cannot convert method value {} into notification code",
+           _0)]
+    ToCode(u64),
+}
+
+
+#[derive(Debug, Fail)]
+#[fail(display = "Expected array for notification arguments but got {}",
+       value_type)]
+pub struct NoticeArgsError {
+    value_type: String,
+}
+
+
+#[derive(Debug, Fail)]
+pub enum ToNoticeError {
+    #[fail(display = "Expected array length of 3, got {}", _0)]
+    ArrayLength(usize),
+
+    #[fail(display = "Invalid notification message type")]
+    InvalidType(#[cause] NoticeTypeError),
+
+    #[fail(display = "Invalid notification message code")]
+    InvalidCode(#[cause] NoticeCodeError),
+
+    #[fail(display = "Invalid notification message arguments")]
+    InvalidArgs(#[cause] NoticeArgsError),
+}
 
 
 // ===========================================================================
@@ -138,16 +187,14 @@ pub trait RpcNotice<C>: RpcMessage
 where
     C: CodeConvert<C>,
 {
-    fn message_code(&self) -> C
-    {
+    fn message_code(&self) -> C {
         let msgcode = &self.as_vec()[1];
         let msgcode = msgcode.as_u64().unwrap();
         let msgcode = C::cast_number(msgcode).unwrap();
         C::from_number(msgcode).unwrap()
     }
 
-    fn message_args(&self) -> &Vec<Value>
-    {
+    fn message_args(&self) -> &Vec<Value> {
         let msgargs = &self.as_vec()[2];
         msgargs.as_array().unwrap()
     }
@@ -166,13 +213,11 @@ impl<C> RpcMessage for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_vec(&self) -> &Vec<Value>
-    {
+    fn as_vec(&self) -> &Vec<Value> {
         self.msg.as_vec()
     }
 
-    fn as_value(&self) -> &Value
-    {
+    fn as_value(&self) -> &Value {
         self.msg.as_value()
     }
 }
@@ -182,8 +227,7 @@ impl<C> RpcMessageType for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_message(&self) -> &Message
-    {
+    fn as_message(&self) -> &Message {
         &self.msg
     }
 }
@@ -221,8 +265,7 @@ where
     ///                       vec![Value::from(42)]);
     /// # }
     /// ```
-    pub fn new(notifycode: C, args: Vec<Value>) -> Self
-    {
+    pub fn new(notifycode: C, args: Vec<Value>) -> Self {
         let msgtype = Value::from(MessageType::Notification as u8);
         let notifycode = Value::from(notifycode.to_u64());
         let msgargs = Value::from(args);
@@ -275,32 +318,26 @@ where
     /// let req = Notice::from(msg).unwrap();
     /// # }
     /// ```
-    pub fn from(msg: Message) -> RpcResult<Self>
-    {
+    pub fn from(msg: Message) -> Result<Self, ToNoticeError> {
         // Notifications is always represented as an array of 4 values
         {
             // Requests is always represented as an array of 3 values
             let array = msg.as_vec();
             let arraylen = array.len();
             if arraylen != 3 {
-                let errmsg =
-                    format!("expected array length of 3, got {}", arraylen);
-                bail!(RpcErrorKind::InvalidArrayLength(errmsg))
+                let err = ToNoticeError::ArrayLength(arraylen);
+                return Err(err);
             }
 
             // Run all check functions and return the first error generated
-            let funcvec: Vec<fn(&Value) -> RpcResult<()>>;
-            funcvec = vec![
-                Self::check_message_type,
-                Self::check_message_code,
-                Self::check_message_args,
-            ];
+            Self::check_message_type(&array[0])
+                .map_err(|e| ToNoticeError::InvalidType(e))?;
 
-            for (i, func) in funcvec.iter().enumerate() {
-                func(&array[i]).chain_err(
-                    || RpcErrorKind::InvalidNotification,
-                )?;
-            }
+            Self::check_message_code(&array[1])
+                .map_err(|e| ToNoticeError::InvalidCode(e))?;
+
+            Self::check_message_args(&array[2])
+                .map_err(|e| ToNoticeError::InvalidArgs(e))?;
         }
 
         Ok(Self {
@@ -313,55 +350,42 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_type(msgtype: &Value) -> RpcResult<()>
-    {
+    fn check_message_type(msgtype: &Value) -> Result<(), NoticeTypeError> {
         let msgtype = msgtype.as_u64().unwrap() as u8;
         let expected_msgtype = MessageType::Notification.to_number();
         if msgtype != expected_msgtype {
-            let errmsg = format!(
-                "expected {} for message type (ie \
-                 MessageType::Notification), got {}",
-                expected_msgtype,
-                msgtype
-            );
-            bail!(RpcErrorKind::InvalidMessageType(errmsg))
+            let err = NoticeTypeError {
+                expected_type: expected_msgtype,
+                msgtype: msgtype,
+            };
+            Err(err)
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     // Checks that the message code parameter of a Notification message is
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_code(msgcode: &Value) -> RpcResult<()>
-    {
+    fn check_message_code(msgcode: &Value) -> Result<(), NoticeCodeError> {
         let msgcode =
             check_int(msgcode.as_u64(), C::max_number(), "a value".to_string())
-                .chain_err(|| {
-                    RpcErrorKind::InvalidNotificationCode(
-                        String::from("invalid value for notification code"),
-                    )
-                })?;
+                .map_err(|e| NoticeCodeError::InvalidValue(e))?;
 
         // Convert msgcode into a number that can be accepted by the
         // CodeConvert type
-        let val = match C::cast_number(msgcode as u64) {
+        let msgcode_u64 = msgcode as u64;
+        let val = match C::cast_number(msgcode_u64) {
             Some(v) => v,
             None => {
-                let errmsg = format!(
-                    "Cannot cast {} into notification code value",
-                    msgcode
-                );
-                bail!(RpcErrorKind::InvalidNotificationCode(errmsg))
+                let err = NoticeCodeError::ToNumber(msgcode_u64);
+                return Err(err);
             }
         };
 
         // Try to convert msgcode into a CodeConvert type
-        C::from_number(val).chain_err(|| {
-            let errmsg =
-                format!("Cannot convert {} into notification code", msgcode);
-            RpcErrorKind::InvalidNotificationCode(errmsg)
-        })?;
+        C::from_number(val).map_err(|_| NoticeCodeError::ToCode(msgcode_u64))?;
         Ok(())
     }
 
@@ -369,17 +393,14 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_args(msgargs: &Value) -> RpcResult<()>
-    {
+    fn check_message_args(msgargs: &Value) -> Result<(), NoticeArgsError> {
         match msgargs.as_array() {
             Some(_) => Ok(()),
             None => {
-                let errmsg = format!(
-                    "expected array for notification arguments but \
-                     got {}",
-                    value_type(&msgargs)
-                );
-                Err(RpcErrorKind::InvalidNotificationArgs(errmsg).into())
+                let err = NoticeArgsError {
+                    value_type: value_type(&msgargs),
+                };
+                Err(err)
             }
         }
     }
@@ -388,8 +409,7 @@ where
 
 // Also implements Into<Message> for NotificationMessage
 impl<C> From<NotificationMessage<C>> for Message {
-    fn from(req: NotificationMessage<C>) -> Message
-    {
+    fn from(req: NotificationMessage<C>) -> Message {
         req.msg
     }
 }
@@ -397,8 +417,7 @@ impl<C> From<NotificationMessage<C>> for Message {
 
 // Also implements Into<Value> for NotificationMessage
 impl<C> From<NotificationMessage<C>> for Value {
-    fn from(req: NotificationMessage<C>) -> Value
-    {
+    fn from(req: NotificationMessage<C>) -> Value {
         req.msg.into()
     }
 }
@@ -418,14 +437,16 @@ mod tests {
 
     // Third-party imports
 
+    use failure::Fail;
     use quickcheck::TestResult;
     use rmpv::{Utf8String, Value};
 
     // // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage, value_type};
-    use core::notify::{NotificationMessage, RpcNotice};
-    use error::{RpcErrorKind, RpcResult};
+    use core::{value_type, CodeConvert, CodeValueError, Message, MessageType,
+               RpcMessage};
+    use core::notify::{NoticeCodeError, NotificationMessage, RpcNotice,
+                       ToNoticeError};
 
     // --------------------
     // Helpers
@@ -470,8 +491,7 @@ mod tests {
     // --------------------------
 
     #[test]
-    fn notificationmessage_from_invalid_arraylen()
-    {
+    fn notificationmessage_from_invalid_arraylen() {
         // --------------------
         // GIVEN
         // --------------------
@@ -497,33 +517,25 @@ mod tests {
         // THEN
         // --------------------
         // Error is returned
-        match result {
-            Err(e) => {
-                let errmsg = "expected array length of 3, got 4".to_string();
-                let expected =
-                    format!("Invalid message array length: {}", errmsg);
-                let res = match e.kind() {
-                    &RpcErrorKind::InvalidArrayLength(ref v) => v == &errmsg,
-                    _ => false,
-                };
-                assert!(res);
-                assert_eq!(e.to_string(), expected);
+        let val = match result {
+            Err(e @ ToNoticeError::ArrayLength(_)) => {
+                let expected = "Expected array length of 3, got 4".to_string();
+                e.to_string() == expected
             }
-            _ => assert!(false),
-        }
+            _ => false,
+        };
+        assert!(val);
     }
 
     #[test]
-    fn notificationmessage_from_invalid_messagetype()
-    {
+    fn notificationmessage_from_invalid_messagetype() {
         // --------------------
         // GIVEN
         // --------------------
         // Message with MessageType::Request
 
         // Create message
-        let expected = MessageType::Request.to_number();
-        let msgtype = Value::from(expected);
+        let msgtype = Value::from(MessageType::Request.to_number());
         let msgcode = Value::from(TestCode::One.to_number());
         let msgval = Value::from(42);
 
@@ -541,35 +553,30 @@ mod tests {
         // --------------------
         // Error is returned
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidNotification => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 2);
-                        let cause = all_err[1];
+            Err(e @ ToNoticeError::InvalidType(_)) => {
+                // Check top-level err message
+                let expected = "Invalid notification message type".to_owned();
+                assert_eq!(e.to_string(), expected);
 
-                        // Compare cause message
-                        let errmsg = format!(
-                            "expected {} for message type (ie \
-                             MessageType::Notification), got {}",
-                            MessageType::Notification.to_number(),
-                            expected
-                        );
-                        let expected =
-                            format!("Invalid message type: {}", errmsg);
-                        assert_eq!(cause.to_string(), expected);
-                    }
-                    _ => assert!(false),
-                }
+                // Check cause error
+                let cause = e.cause().unwrap();
+                let expected = format!(
+                    "Expected notification message type value {}, got {}",
+                    MessageType::Notification.to_number(),
+                    MessageType::Request.to_number()
+                );
+                assert_eq!(cause.to_string(), expected);
+                assert!(cause.cause().is_none());
+            }
+            Err(e2) => {
+                println!("ERROR ERROR {:?}", e2);
             }
             _ => assert!(false),
         }
     }
 
     #[test]
-    fn notificationmessage_from_message_code_invalid_type()
-    {
+    fn notificationmessage_from_message_code_invalid_type() {
         // --------------------
         // GIVEN
         // --------------------
@@ -594,32 +601,31 @@ mod tests {
         // --------------------
         // Error is returned for the invalid message id
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidNotification => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 3);
-                        let next_err = all_err[1];
-                        let cause = all_err[2];
-
-                        // Compare next err message ie error generated by
-                        // check_message_code
-                        assert_eq!(
-                            next_err.to_string(),
-                            format!(
-                                "Invalid notification code: {}",
-                                "invalid value for notification code"
-                            )
-                        );
-
-                        // Compare cause message
-                        let errmsg = "expected a value but got None";
-                        let expected = format!("Invalid type: {}", errmsg);
-                        assert_eq!(cause.to_string(), expected);
-                    }
-                    _ => assert!(false),
+            Err(e @ ToNoticeError::InvalidCode(_)) => {
+                // Check code error
+                match e {
+                    ToNoticeError::InvalidCode(
+                        NoticeCodeError::InvalidValue(_),
+                    ) => {}
+                    _ => unreachable!(),
                 }
+
+                // Check top-level error
+                let expected = "Invalid notification message code".to_owned();
+                assert_eq!(e.to_string(), expected);
+
+                // Check code error
+                let code_err = e.cause().unwrap();
+                let expected = "Invalid notification code value".to_owned();
+                assert_eq!(code_err.to_string(), expected);
+
+                // Check cause error
+                let cause = code_err.cause().unwrap();
+                let expected = "Expected a value but got None".to_owned();
+                assert_eq!(cause.to_string(), expected);
+
+                // Check no more errors
+                assert!(cause.cause().is_none());
             }
             _ => assert!(false),
         }
@@ -655,32 +661,33 @@ mod tests {
             // --------------------
             // Error is returned for the invalid notification code value
             let res = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidNotification => {
-                            // Get cause
-                            let all_err: Vec<_> = e.iter().collect();
-                            let numerror = all_err.len() == 3;
-                            let next_err = all_err[1];
-                            let cause = all_err[2];
-
-                            // Compare next err message ie error generated by
-                            // check_message_method
-                            let next_errmsg = "Invalid notification code: \
-                                               invalid value for notification code";
-                            let next_errmsg =
-                                next_err.to_string() == next_errmsg;
-
-                            // Compare cause message
-                            let errmsg = format!("expected value <= {} but got value {}",
-                                                 TestCode::max_number().to_string(),
-                                                 msgcode.to_string());
-                            let expected = format!("Invalid type: {}", errmsg);
-                            let cause_errmsg = cause.to_string() == expected;
-                            numerror && next_errmsg && cause_errmsg
-                        }
-                        _ => false
+                Err(e @ ToNoticeError::InvalidCode(_)) => {
+                    // Check code error
+                    match e {
+                        ToNoticeError::InvalidCode(
+                            NoticeCodeError::InvalidValue(_)
+                        ) => {}
+                        _ => unreachable!(),
                     }
+
+                    // Check top-level error
+                    let expected = "Invalid notification message code"
+                        .to_owned();
+                    assert_eq!(e.to_string(), expected);
+
+                    // Check code error
+                    let code_err = e.cause().unwrap();
+                    let expected = "Invalid notificaton code value".to_owned();
+                    assert_eq!(code_err.to_string(), expected);
+
+                    // Check cause error
+                    let cause = code_err.cause().unwrap();
+                    let expected = format!("Expected value <= {} but got \
+                                            value {}",
+                                           u8::max_value(),
+                                           msgcode.to_string());
+                    cause.to_string() == expected &&
+                        cause.cause().is_none()
                 }
                 _ => false
             };
@@ -716,32 +723,33 @@ mod tests {
             // --------------------
             // Error is returned for the invalid message code value
             let res = match result {
-                Err(e) => {
-                    match e.kind() {
-                        &RpcErrorKind::InvalidNotification => {
-                            // Get cause
-                            let all_err: Vec<_> = e.iter().collect();
-                            let numerror = all_err.len() == 3;
-                            let next_err = all_err[1];
-                            let cause = all_err[2];
-
-                            // Compare next err message ie error generated by
-                            // check_message_method
-                            let next_errmsg = "Invalid notification code: \
-                                               invalid value for notification code";
-                            let next_errmsg =
-                                next_err.to_string() == next_errmsg;
-
-                            // Compare cause message
-                            let errmsg = format!("expected value <= {} but got value {}",
-                                                 TestCode::max_number().to_string(),
-                                                 msgcode.to_string());
-                            let expected = format!("Invalid type: {}", errmsg);
-                            let cause_errmsg = cause.to_string() == expected;
-                            numerror && next_errmsg && cause_errmsg
-                        }
-                        _ => false
+                Err(e @ ToNoticeError::InvalidCode(_)) => {
+                    // Check code error
+                    match e {
+                        ToNoticeError::InvalidCode(
+                            NoticeCodeError::InvalidValue(_)
+                        ) => {}
+                        _ => unreachable!(),
                     }
+
+                    // Check top-level error
+                    let expected = "Invalid notification message code"
+                        .to_owned();
+                    assert_eq!(e.to_string(), expected);
+
+                    // Check code error
+                    let code_err = e.cause().unwrap();
+                    let expected = "Invalid notification code value".to_owned();
+                    assert_eq!(code_err.to_string(), expected);
+
+                    // Check cause error
+                    let cause = code_err.cause().unwrap();
+                    let expected = format!("Expected value <= {} but got \
+                                            value {}",
+                                           TestCode::max_number(),
+                                           msgcode.to_string());
+                    cause.to_string() == expected &&
+                        cause.cause().is_none()
                 }
                 _ => false
             };
@@ -750,8 +758,7 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_from_message_args_invalid_type()
-    {
+    fn notificationmessage_from_message_args_invalid_type() {
         // --------------------
         // GIVEN
         // --------------------
@@ -776,28 +783,22 @@ mod tests {
         // --------------------
         // Error is returned for the invalid notification args type
         match result {
-            Err(e) => {
-                match e.kind() {
-                    &RpcErrorKind::InvalidNotification => {
-                        // Get cause
-                        let all_err: Vec<_> = e.iter().collect();
-                        assert_eq!(all_err.len(), 2);
-                        let cause = all_err[1];
+            Err(e @ ToNoticeError::InvalidArgs(_)) => {
+                // Check top-level error
+                let expected =
+                    "Invalid notification message arguments".to_owned();
+                assert_eq!(e.to_string(), expected);
 
-                        // Compare cause message
-                        let errmsg = format!(
-                            "expected array for notification \
-                             arguments but got {}",
-                            value_type(&msgval)
-                        );
-                        let expected = format!(
-                            "Invalid notification arguments: {}",
-                            errmsg
-                        );
-                        assert_eq!(cause.to_string(), expected);
-                    }
-                    _ => assert!(false),
-                }
+                // Check cause error
+                let cause = e.cause().unwrap();
+                let expected = format!(
+                    "Expected array for notification arguments but got {}",
+                    value_type(&msgval)
+                );
+                assert_eq!(cause.to_string(), expected);
+
+                // Check no more errors
+                assert!(cause.cause().is_none());
             }
             _ => assert!(false),
         }
@@ -808,8 +809,7 @@ mod tests {
     // --------------------
 
     #[test]
-    fn notificationmessage_rpcmessage_as_vec()
-    {
+    fn notificationmessage_rpcmessage_as_vec() {
         // --------------------
         // GIVEN
         // --------------------
@@ -840,8 +840,7 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_rpcmessage_as_value()
-    {
+    fn notificationmessage_rpcmessage_as_value() {
         // --------------------
         // GIVEN
         // --------------------
@@ -876,8 +875,7 @@ mod tests {
     // --------------------
 
     #[test]
-    fn notificationmessage_rpcnotice_message_code()
-    {
+    fn notificationmessage_rpcnotice_message_code() {
         // --------------------
         // GIVEN
         // --------------------
@@ -909,8 +907,7 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_rpcnotice_message_args()
-    {
+    fn notificationmessage_rpcnotice_message_args() {
         // --------------------
         // GIVEN
         // --------------------
