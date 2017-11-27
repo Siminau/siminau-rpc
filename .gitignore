@@ -1,6 +1,7 @@
 # General
 /target/
 /derive/target/
+/codeconvert/target/
 **/*.rs.bk
 Cargo.lock
 /tags
