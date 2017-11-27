@@ -1,0 +1,10 @@
+[package]
+name = "codeconvert"
+version = "0.1.0"
+authors = ["Ariel De Ocampo <arielmakestuff@gmail.com>"]
+
+[dependencies]
+
+# Error deps
+failure = "0.1"
+failure_derive = "0.1"
