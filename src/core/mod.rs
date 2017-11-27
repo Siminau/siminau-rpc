@@ -132,9 +132,7 @@ use std::clone::Clone;
 use rmpv::Value;
 
 // Local imports
-
-// Re-exports
-pub use codeconvert::{CodeConvert, CodeValueError};
+pub use codeconvert::*;
 
 
 // ===========================================================================

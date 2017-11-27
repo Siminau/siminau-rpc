@@ -86,7 +86,8 @@ pub use self::core::MessageType;
 
 // Types
 
-pub use self::core::Message;
+
+pub use self::core::{CodeValueError, Message};
 // pub use self::core::notify::NotificationMessage;
 
 pub use self::core::request::RequestMessage;

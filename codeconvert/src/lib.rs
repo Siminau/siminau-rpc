@@ -32,13 +32,14 @@
 //! # Example
 //!
 //! ```rust
-//! extern crate codeconvert
+//! extern crate codeconvert;
 //!
 //! use codeconvert::{CodeConvert, CodeValueError};
 //!
 //! # fn main() {
 //!
 //! // Create an enum
+//! #[derive(Debug, PartialEq, Clone)]
 //! enum Code {
 //!     One,
 //!     Two,
