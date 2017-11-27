@@ -3,24 +3,90 @@
 //
 // This file is released under the MIT License.
 
-//! Types and traits for working with a type of MessagePack RPC
+//! Trait for converting integers to and from a C-style enum
 //!
-//! The [`Message`] type is the core underlying type that wraps around the
-//! [`rmpv::Value`] type. It ensures that the given [`rmpv::Value`] object
-//! conforms with the expected RPC spec.
+//! # Types and Traits
 //!
-//! [`Message`]: message/struct.Message.html
-//! [`rmpv::Value`]: https://docs.rs/rmpv/0.4.0/rmpv/enum.Value.html
+//! This module provides 1 trait and 1 error type. The trait is:
 //!
-//! # MessagePack RPC
+//! * CodeConvert
 //!
-//! The [`msgpack-rpc`] spec is mostly followed with a single exception: the
-//! method argument of Request and Notification messages is not a string but
-//! instead an integer. Since one goal in safesec is to ensure that all public
-//! interfaces have strict type and value validation, an integer that could be
-//! mapped to a C-style enum made better sense that using an arbitrary string.
+//! And the error type provided is:
 //!
-//! [`msgpack-rpc`]: https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md
+//! * CodeValueError
+//!
+//! While each trait and error is discussed in more detail in their definition,
+//! the following summarizes the purpose of each trait and error type.
+//!
+//! ## CodeConvert
+//!
+//! This trait provides a common interface for converting between an integer and
+//! a type.
+//!
+//! ## CodeValueError
+//!
+//! The error returned by some of CodeConvert's methods. As of this writing,
+//! this error is only used when attempting to convert an integer into an
+//! object that implements CodeConvert.
+//!
+//! # Example
+//!
+//! ```rust
+//! extern crate codeconvert
+//!
+//! use codeconvert::{CodeConvert, CodeValueError};
+//!
+//! # fn main() {
+//!
+//! // Create an enum
+//! enum Code {
+//!     One,
+//!     Two,
+//! }
+//!
+//! // Implement CodeConvert
+//! impl CodeConvert<Code> for Code {
+//!     type int_type = u8;
+//!
+//!     fn from_number(num: Self::int_type) -> Result<Code, CodeValueError> {
+//!         Self::from_u64(num as u64)
+//!     }
+//!
+//!     fn from_u64(num: u64) -> Result<Code, CodeValueError> {
+//!         let ret = match num {
+//!             0 => Code::One,
+//!             1 => Code::Two,
+//!             _ => {
+//!                 return Err(CodeValueError { code: num });
+//!             }
+//!         };
+//!         Ok(ret)
+//!     }
+//!
+//!     fn to_number(&self) -> Self::int_type {
+//!         self.clone() as Self::int_type
+//!     }
+//!
+//!     fn to_u64(&self) -> u64 {
+//!         self.clone() as u64
+//!     }
+//!
+//!     fn max_number() -> u64 {
+//!         Code::Two as u64
+//!     }
+//!
+//!     fn cast_number(n: u64) -> Option<Self::int_type> {
+//!         let maxval = Self::int_type::max_value() as u64;
+//!         if n <= maxval {
+//!             Some(n as Self::int_type)
+//!         } else {
+//!             None
+//!         }
+//!     }
+//! }
+//!
+//! # }
+//! ```
 #![recursion_limit = "1024"]
 
 // ===========================================================================
@@ -60,8 +126,6 @@ pub struct CodeValueError {
 ///
 /// 1. The enum is a C-style enum
 /// 2. The enum's values are unsigned integers
-/// 3. The enum's values are continuous without any gaps ie 0, 1, 2 are valid
-///    values but 0, 2, 4 is not
 ///
 /// [`CodeConvert`]: trait.CodeConvert.html
 pub trait CodeConvert<T>: Clone + PartialEq {
