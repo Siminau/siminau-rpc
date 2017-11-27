@@ -33,7 +33,8 @@ use tokio_core::reactor::Handle;
 // ===========================================================================
 
 
-pub trait ServerShutdown {
+pub trait ServerShutdown
+{
     fn server_control(&self) -> Option<(Handle, mpsc::Sender<ServerMessage>)>;
 
     fn shutdown(&self)
@@ -47,7 +48,8 @@ pub trait ServerShutdown {
 }
 
 
-pub trait ServerShutdownBuilder {
+pub trait ServerShutdownBuilder
+{
     fn control(&mut self, mpsc::Sender<ServerMessage>, Handle);
 }
 
@@ -57,7 +59,8 @@ pub trait ServerShutdownBuilder {
 // ===========================================================================
 
 
-pub enum ServerMessage {
+pub enum ServerMessage
+{
     // Send(TcpStream, SocketAddr),
     Shutdown,
 }
@@ -80,14 +83,16 @@ pub fn shutdown(loop_handle: &Handle, control: mpsc::Sender<ServerMessage>)
 }
 
 
-pub struct Server {
+pub struct Server
+{
     control: (mpsc::Sender<ServerMessage>, mpsc::Receiver<ServerMessage>),
     listener: Incoming, // From TcpListener::incoming(),
     shutdown: bool,
 }
 
 
-impl Server {
+impl Server
+{
     pub fn new(stream: Incoming, channel_size: usize) -> Self
     {
         let control = mpsc::channel::<ServerMessage>(channel_size);
@@ -138,7 +143,8 @@ impl Server {
 }
 
 
-impl Stream for Server {
+impl Stream for Server
+{
     type Item = (TcpStream, SocketAddr);
     type Error = io::Error;
 

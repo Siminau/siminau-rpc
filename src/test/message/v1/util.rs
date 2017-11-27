@@ -19,9 +19,11 @@
 // ===========================================================================
 
 
-mod openmode {
+mod openmode
+{
 
-    mod default {
+    mod default
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -53,7 +55,8 @@ mod openmode {
         }
     }
 
-    mod from_bits {
+    mod from_bits
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -127,7 +130,8 @@ mod openmode {
         }
     }
 
-    mod flags {
+    mod flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -186,7 +190,8 @@ mod openmode {
         }
     }
 
-    mod kind {
+    mod kind
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -245,7 +250,8 @@ mod openmode {
         }
     }
 
-    mod new_kind {
+    mod new_kind
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -285,7 +291,8 @@ mod openmode {
         }
     }
 
-    mod replace_flags {
+    mod replace_flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -324,7 +331,8 @@ mod openmode {
         }
     }
 
-    mod insert_flags {
+    mod insert_flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -365,7 +373,8 @@ mod openmode {
         }
     }
 
-    mod remove_flags {
+    mod remove_flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -432,7 +441,8 @@ mod openmode {
         }
     }
 
-    mod toggle_flags {
+    mod toggle_flags
+    {
         // Stdlib imports
 
         // Third-party imports

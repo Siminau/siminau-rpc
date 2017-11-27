@@ -20,7 +20,8 @@
 // ===========================================================================
 
 
-mod auth {
+mod auth
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -59,10 +60,11 @@ mod auth {
         // --------------------
         let val = match result {
             Err(e @ BuildResponseError::Auth(_)) => {
-                let expected = format!("Unable to build auth response \
-                                        message: file id has invalid \
-                                        kind {}",
-                                       fileid.kind.bits());
+                let expected = format!(
+                    "Unable to build auth response message: file id has \
+                     invalid kind {}",
+                    fileid.kind.bits()
+                );
                 e.to_string() == expected
             }
             _ => false,
@@ -184,7 +186,8 @@ mod auth {
     }
 }
 
-mod flush {
+mod flush
+{
     // Third party imports
 
     // use rmpv::Value;
@@ -289,7 +292,8 @@ mod flush {
 }
 
 
-mod attach {
+mod attach
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -337,10 +341,11 @@ mod attach {
         // --------------------
         let val = match result {
             Err(e @ BuildResponseError::Attach(_)) => {
-                let expected = format!("Unable to build attach response \
-                                        message: rootfile_id has invalid \
-                                        kind {}",
-                                       fileid.kind.bits());
+                let expected = format!(
+                    "Unable to build attach response message: rootfile_id has \
+                     invalid kind {}",
+                    fileid.kind.bits()
+                );
                 e.to_string() == expected
             }
             _ => false,
@@ -470,7 +475,8 @@ mod attach {
     }
 }
 
-mod walk {
+mod walk
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -696,7 +702,8 @@ mod walk {
 }
 
 
-mod open {
+mod open
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -870,7 +877,8 @@ mod open {
 }
 
 
-mod create {
+mod create
+{
     // Third party imports
 
     use quickcheck::TestResult;

@@ -116,7 +116,8 @@ use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
 #[derive(Debug, Fail)]
 #[fail(display = "expected request message type value {}, got {}",
        expected_type, msgtype)]
-pub struct RequestTypeError {
+pub struct RequestTypeError
+{
     expected_type: u8,
     msgtype: u8,
 }
@@ -124,13 +125,15 @@ pub struct RequestTypeError {
 
 #[derive(Debug, Fail)]
 #[fail(display = "Invalid request message id")]
-pub struct RequestIDError {
+pub struct RequestIDError
+{
     #[cause] err: CheckIntError,
 }
 
 
 #[derive(Debug, Fail)]
-pub enum RequestCodeError {
+pub enum RequestCodeError
+{
     #[fail(display = "Invalid request code value")]
     InvalidValue(#[cause] CheckIntError),
 
@@ -144,13 +147,15 @@ pub enum RequestCodeError {
 
 #[derive(Debug, Fail)]
 #[fail(display = "Expected array for request arguments but got {}", value_type)]
-pub struct RequestArgsError {
+pub struct RequestArgsError
+{
     value_type: String,
 }
 
 
 #[derive(Debug, Fail)]
-pub enum ToRequestError {
+pub enum ToRequestError
+{
     #[fail(display = "expected array length of 4, got {}", _0)]
     ArrayLength(usize),
 
@@ -205,13 +210,15 @@ where
     C: CodeConvert<C>,
 {
     /// Return the message's ID value.
-    fn message_id(&self) -> u32 {
+    fn message_id(&self) -> u32
+    {
         let msgid = &self.as_vec()[1];
         msgid.as_u64().unwrap() as u32
     }
 
     /// Return the message's code/method value.
-    fn message_method(&self) -> C {
+    fn message_method(&self) -> C
+    {
         let msgmeth = &self.as_vec()[2];
         let msgmeth = msgmeth.as_u64().unwrap();
         let msgmeth = C::cast_number(msgmeth).unwrap();
@@ -219,7 +226,8 @@ where
     }
 
     /// Return the message's arguments.
-    fn message_args(&self) -> &Vec<Value> {
+    fn message_args(&self) -> &Vec<Value>
+    {
         let msgargs = &self.as_vec()[3];
         msgargs.as_array().unwrap()
     }
@@ -228,7 +236,8 @@ where
 
 /// A representation of the Request RPC message type.
 #[derive(Debug)]
-pub struct RequestMessage<C> {
+pub struct RequestMessage<C>
+{
     msg: Message,
     codetype: PhantomData<C>,
 }
@@ -238,11 +247,13 @@ impl<C> RpcMessage for RequestMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_vec(&self) -> &Vec<Value> {
+    fn as_vec(&self) -> &Vec<Value>
+    {
         self.msg.as_vec()
     }
 
-    fn as_value(&self) -> &Value {
+    fn as_value(&self) -> &Value
+    {
         self.msg.as_value()
     }
 }
@@ -252,7 +263,8 @@ impl<C> RpcMessageType for RequestMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_message(&self) -> &Message {
+    fn as_message(&self) -> &Message
+    {
         &self.msg
     }
 }
@@ -290,7 +302,8 @@ where
     ///                        vec![Value::from(42)]);
     /// # }
     /// ```
-    pub fn new(msgid: u32, msgmeth: C, args: Vec<Value>) -> Self {
+    pub fn new(msgid: u32, msgmeth: C, args: Vec<Value>) -> Self
+    {
         let msgtype = Value::from(MessageType::Request as u8);
         let msgid = Value::from(msgid);
         let msgmeth = Value::from(msgmeth.to_u64());
@@ -347,7 +360,8 @@ where
     /// let req = Request::from(msg).unwrap();
     /// # }
     /// ```
-    pub fn from(msg: Message) -> Result<Self, ToRequestError> {
+    pub fn from(msg: Message) -> Result<Self, ToRequestError>
+    {
         {
             // Requests is always represented as an array of 4 values
             let array = msg.as_vec();
@@ -381,7 +395,8 @@ where
     // Checks that the message type parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_type(msgtype: &Value) -> Result<(), RequestTypeError> {
+    fn check_message_type(msgtype: &Value) -> Result<(), RequestTypeError>
+    {
         let msgtype = msgtype.as_u64().unwrap() as u8;
         let expected_msgtype = MessageType::Request.to_number();
         if msgtype != expected_msgtype {
@@ -398,7 +413,8 @@ where
     // Checks that the message id parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_id(msgid: &Value) -> Result<(), RequestIDError> {
+    fn check_message_id(msgid: &Value) -> Result<(), RequestIDError>
+    {
         check_int(msgid.as_u64(), u32::max_value() as u64, "u32".to_string())
             .map_err(|e| RequestIDError { err: e })?;
         Ok(())
@@ -407,7 +423,8 @@ where
     // Checks that the message method parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_method(msgmeth: &Value) -> Result<(), RequestCodeError> {
+    fn check_message_method(msgmeth: &Value) -> Result<(), RequestCodeError>
+    {
         let msgmeth =
             check_int(msgmeth.as_u64(), C::max_number(), "a value".to_string())
                 .map_err(|e| RequestCodeError::InvalidValue(e))?;
@@ -431,7 +448,8 @@ where
     // Check that the message arguments parameter of a Request message is valid
     //
     // This is a private method used by the public from() method
-    fn check_message_args(msgargs: &Value) -> Result<(), RequestArgsError> {
+    fn check_message_args(msgargs: &Value) -> Result<(), RequestArgsError>
+    {
         match msgargs.as_array() {
             Some(_) => Ok(()),
             None => {
@@ -446,16 +464,20 @@ where
 
 
 // Also implements Into<Message> for RequestMessage
-impl<C> From<RequestMessage<C>> for Message {
-    fn from(req: RequestMessage<C>) -> Message {
+impl<C> From<RequestMessage<C>> for Message
+{
+    fn from(req: RequestMessage<C>) -> Message
+    {
         req.msg
     }
 }
 
 
 // Also implements Into<Value> for RequestMessage
-impl<C> From<RequestMessage<C>> for Value {
-    fn from(req: RequestMessage<C>) -> Value {
+impl<C> From<RequestMessage<C>> for Value
+{
+    fn from(req: RequestMessage<C>) -> Value
+    {
         req.msg.into()
     }
 }
@@ -467,7 +489,8 @@ impl<C> From<RequestMessage<C>> for Value {
 
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
 
     // --------------------
     // Imports
@@ -491,7 +514,8 @@ mod tests {
     // Helpers
     // --------------------
     #[derive(Debug, PartialEq, Clone, CodeConvert)]
-    enum TestEnum {
+    enum TestEnum
+    {
         One,
         Two,
         Three,
@@ -530,7 +554,8 @@ mod tests {
     // --------------------
 
     #[test]
-    fn requestmessage_from_invalid_arraylen() {
+    fn requestmessage_from_invalid_arraylen()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -566,7 +591,8 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_invalid_messagetype() {
+    fn requestmessage_from_invalid_messagetype()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -613,7 +639,8 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_message_id_invalid_type() {
+    fn requestmessage_from_message_id_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -716,7 +743,8 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_message_method_invalid_type() {
+    fn requestmessage_from_message_method_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -894,7 +922,8 @@ mod tests {
     }
 
     #[test]
-    fn requestmessage_from_message_args_invalid_type() {
+    fn requestmessage_from_message_args_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -943,7 +972,8 @@ mod tests {
     // --------------------
 
     #[test]
-    fn rpcmessage_as_vec() {
+    fn rpcmessage_as_vec()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -975,7 +1005,8 @@ mod tests {
     }
 
     #[test]
-    fn rpcmessage_as_value() {
+    fn rpcmessage_as_value()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -1011,7 +1042,8 @@ mod tests {
     // --------------------
 
     #[test]
-    fn rpcrequest_message_id() {
+    fn rpcrequest_message_id()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -1043,7 +1075,8 @@ mod tests {
     }
 
     #[test]
-    fn rpcrequest_message_method() {
+    fn rpcrequest_message_method()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -1076,7 +1109,8 @@ mod tests {
     }
 
     #[test]
-    fn rpcrequest_message_args() {
+    fn rpcrequest_message_args()
+    {
         // --------------------
         // GIVEN
         // --------------------

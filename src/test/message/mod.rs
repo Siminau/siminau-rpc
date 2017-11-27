@@ -16,9 +16,11 @@ mod v1;
 // ===========================================================================
 
 
-mod requestbuilder {
+mod requestbuilder
+{
 
-    mod version {
+    mod version
+    {
         // Third party imports
 
         use quickcheck::TestResult;
@@ -26,7 +28,7 @@ mod requestbuilder {
         // Local imports
 
         use core::request::RpcRequest;
-        use message::{RequestCode, request};
+        use message::{request, RequestCode};
 
         quickcheck! {
 
@@ -63,9 +65,11 @@ mod requestbuilder {
 }
 
 
-mod responsebuilder {
+mod responsebuilder
+{
 
-    mod error {
+    mod error
+    {
 
         // Third party imports
 
@@ -75,7 +79,7 @@ mod responsebuilder {
 
         use core::request::RpcRequest;
         use core::response::RpcResponse;
-        use message::{ResponseCode, request, response};
+        use message::{request, response, ResponseCode};
 
         quickcheck! {
 
@@ -111,7 +115,8 @@ mod responsebuilder {
         }
     }
 
-    mod version {
+    mod version
+    {
         // Third party imports
 
         use quickcheck::TestResult;
@@ -120,7 +125,7 @@ mod responsebuilder {
 
         use core::request::RpcRequest;
         use core::response::RpcResponse;
-        use message::{ResponseCode, request, response};
+        use message::{request, response, ResponseCode};
 
         quickcheck! {
 
@@ -159,15 +164,17 @@ mod responsebuilder {
 }
 
 
-mod infobuilder {
+mod infobuilder
+{
 
-    mod done {
+    mod done
+    {
 
         // Local imports
 
         use core::{MessageType, RpcMessage};
         use core::notify::RpcNotice;
-        use message::{NotifyCode, info};
+        use message::{info, NotifyCode};
 
         #[test]
         fn info_msg()

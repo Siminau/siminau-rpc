@@ -108,14 +108,16 @@ use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
 #[derive(Debug, Fail)]
 #[fail(display = "Expected notification message type value {}, got {}",
        expected_type, msgtype)]
-pub struct NoticeTypeError {
+pub struct NoticeTypeError
+{
     expected_type: u8,
     msgtype: u8,
 }
 
 
 #[derive(Debug, Fail)]
-pub enum NoticeCodeError {
+pub enum NoticeCodeError
+{
     #[fail(display = "Invalid notification code value")]
     InvalidValue(#[cause] CheckIntError),
 
@@ -131,13 +133,15 @@ pub enum NoticeCodeError {
 #[derive(Debug, Fail)]
 #[fail(display = "Expected array for notification arguments but got {}",
        value_type)]
-pub struct NoticeArgsError {
+pub struct NoticeArgsError
+{
     value_type: String,
 }
 
 
 #[derive(Debug, Fail)]
-pub enum ToNoticeError {
+pub enum ToNoticeError
+{
     #[fail(display = "Expected array length of 3, got {}", _0)]
     ArrayLength(usize),
 
@@ -187,14 +191,16 @@ pub trait RpcNotice<C>: RpcMessage
 where
     C: CodeConvert<C>,
 {
-    fn message_code(&self) -> C {
+    fn message_code(&self) -> C
+    {
         let msgcode = &self.as_vec()[1];
         let msgcode = msgcode.as_u64().unwrap();
         let msgcode = C::cast_number(msgcode).unwrap();
         C::from_number(msgcode).unwrap()
     }
 
-    fn message_args(&self) -> &Vec<Value> {
+    fn message_args(&self) -> &Vec<Value>
+    {
         let msgargs = &self.as_vec()[2];
         msgargs.as_array().unwrap()
     }
@@ -203,7 +209,8 @@ where
 
 /// A representation of the Notification RPC message type.
 #[derive(Debug)]
-pub struct NotificationMessage<C> {
+pub struct NotificationMessage<C>
+{
     msg: Message,
     msgtype: PhantomData<C>,
 }
@@ -213,11 +220,13 @@ impl<C> RpcMessage for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_vec(&self) -> &Vec<Value> {
+    fn as_vec(&self) -> &Vec<Value>
+    {
         self.msg.as_vec()
     }
 
-    fn as_value(&self) -> &Value {
+    fn as_value(&self) -> &Value
+    {
         self.msg.as_value()
     }
 }
@@ -227,7 +236,8 @@ impl<C> RpcMessageType for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_message(&self) -> &Message {
+    fn as_message(&self) -> &Message
+    {
         &self.msg
     }
 }
@@ -265,7 +275,8 @@ where
     ///                       vec![Value::from(42)]);
     /// # }
     /// ```
-    pub fn new(notifycode: C, args: Vec<Value>) -> Self {
+    pub fn new(notifycode: C, args: Vec<Value>) -> Self
+    {
         let msgtype = Value::from(MessageType::Notification as u8);
         let notifycode = Value::from(notifycode.to_u64());
         let msgargs = Value::from(args);
@@ -318,7 +329,8 @@ where
     /// let req = Notice::from(msg).unwrap();
     /// # }
     /// ```
-    pub fn from(msg: Message) -> Result<Self, ToNoticeError> {
+    pub fn from(msg: Message) -> Result<Self, ToNoticeError>
+    {
         // Notifications is always represented as an array of 4 values
         {
             // Requests is always represented as an array of 3 values
@@ -350,7 +362,8 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_type(msgtype: &Value) -> Result<(), NoticeTypeError> {
+    fn check_message_type(msgtype: &Value) -> Result<(), NoticeTypeError>
+    {
         let msgtype = msgtype.as_u64().unwrap() as u8;
         let expected_msgtype = MessageType::Notification.to_number();
         if msgtype != expected_msgtype {
@@ -368,7 +381,8 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_code(msgcode: &Value) -> Result<(), NoticeCodeError> {
+    fn check_message_code(msgcode: &Value) -> Result<(), NoticeCodeError>
+    {
         let msgcode =
             check_int(msgcode.as_u64(), C::max_number(), "a value".to_string())
                 .map_err(|e| NoticeCodeError::InvalidValue(e))?;
@@ -393,7 +407,8 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_args(msgargs: &Value) -> Result<(), NoticeArgsError> {
+    fn check_message_args(msgargs: &Value) -> Result<(), NoticeArgsError>
+    {
         match msgargs.as_array() {
             Some(_) => Ok(()),
             None => {
@@ -408,16 +423,20 @@ where
 
 
 // Also implements Into<Message> for NotificationMessage
-impl<C> From<NotificationMessage<C>> for Message {
-    fn from(req: NotificationMessage<C>) -> Message {
+impl<C> From<NotificationMessage<C>> for Message
+{
+    fn from(req: NotificationMessage<C>) -> Message
+    {
         req.msg
     }
 }
 
 
 // Also implements Into<Value> for NotificationMessage
-impl<C> From<NotificationMessage<C>> for Value {
-    fn from(req: NotificationMessage<C>) -> Value {
+impl<C> From<NotificationMessage<C>> for Value
+{
+    fn from(req: NotificationMessage<C>) -> Value
+    {
         req.msg.into()
     }
 }
@@ -429,7 +448,8 @@ impl<C> From<NotificationMessage<C>> for Value {
 
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     // --------------------
     // Imports
     // --------------------
@@ -452,7 +472,8 @@ mod tests {
     // Helpers
     // --------------------
     #[derive(Debug, PartialEq, Clone, CodeConvert)]
-    enum TestCode {
+    enum TestCode
+    {
         One,
         Two,
         Three,
@@ -491,7 +512,8 @@ mod tests {
     // --------------------------
 
     #[test]
-    fn notificationmessage_from_invalid_arraylen() {
+    fn notificationmessage_from_invalid_arraylen()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -528,7 +550,8 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_from_invalid_messagetype() {
+    fn notificationmessage_from_invalid_messagetype()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -576,7 +599,8 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_from_message_code_invalid_type() {
+    fn notificationmessage_from_message_code_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -758,7 +782,8 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_from_message_args_invalid_type() {
+    fn notificationmessage_from_message_args_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -809,7 +834,8 @@ mod tests {
     // --------------------
 
     #[test]
-    fn notificationmessage_rpcmessage_as_vec() {
+    fn notificationmessage_rpcmessage_as_vec()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -840,7 +866,8 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_rpcmessage_as_value() {
+    fn notificationmessage_rpcmessage_as_value()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -875,7 +902,8 @@ mod tests {
     // --------------------
 
     #[test]
-    fn notificationmessage_rpcnotice_message_code() {
+    fn notificationmessage_rpcnotice_message_code()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -907,7 +935,8 @@ mod tests {
     }
 
     #[test]
-    fn notificationmessage_rpcnotice_message_args() {
+    fn notificationmessage_rpcnotice_message_args()
+    {
         // --------------------
         // GIVEN
         // --------------------

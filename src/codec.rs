@@ -32,16 +32,15 @@ use tokio_io::codec::{Decoder, Encoder};
 pub struct MsgPackCodec;
 
 
-impl MsgPackCodec {
+impl MsgPackCodec
+{
     fn handle_decode_error(err: decode::Error) -> Option<io::Error>
     {
         match err {
-            decode::Error::InvalidDataRead(e) => {
-                match e.kind() {
-                    io::ErrorKind::UnexpectedEof => None,
-                    _ => Some(e),
-                }
-            }
+            decode::Error::InvalidDataRead(e) => match e.kind() {
+                io::ErrorKind::UnexpectedEof => None,
+                _ => Some(e),
+            },
             decode::Error::InvalidMarkerRead(e) => Some(e),
             decode::Error::TypeMismatch(_) => {
                 let errmsg = "msgpack type mismatch".to_string();
@@ -79,7 +78,8 @@ impl MsgPackCodec {
 }
 
 
-impl Decoder for MsgPackCodec {
+impl Decoder for MsgPackCodec
+{
     type Item = Value;
     type Error = io::Error;
 
@@ -106,18 +106,17 @@ impl Decoder for MsgPackCodec {
 
         match result {
             Ok(v) => Ok(Some(v)),
-            Err(e) => {
-                match Self::handle_decode_error(e) {
-                    Some(err) => Err(err),
-                    None => Ok(None),
-                }
-            }
+            Err(e) => match Self::handle_decode_error(e) {
+                Some(err) => Err(err),
+                None => Ok(None),
+            },
         }
     }
 }
 
 
-impl Encoder for MsgPackCodec {
+impl Encoder for MsgPackCodec
+{
     type Item = Value;
     type Error = io::Error;
 
@@ -137,7 +136,8 @@ impl Encoder for MsgPackCodec {
 
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
 
     // --------------------
     // Imports

@@ -8,7 +8,8 @@
 // ===========================================================================
 
 
-mod read_to_block {
+mod read_to_block
+{
     // --------------------
     // Imports
     // --------------------
@@ -20,7 +21,7 @@ mod read_to_block {
     // Third-party imports
 
     use futures::Future;
-    use futures::future::{Either, ok as noop_future};
+    use futures::future::{ok as noop_future, Either};
     use quickcheck::TestResult;
     use tokio_core::reactor::Core;
     use tokio_io::AsyncRead;
@@ -34,12 +35,14 @@ mod read_to_block {
     // --------------------
     // Custom Read object that always returns io::ErrorKind::WouldBlock
     #[derive(Debug)]
-    struct MockRead {
+    struct MockRead
+    {
         inner: Vec<String>,
         read_cursor: bool,
     }
 
-    impl MockRead {
+    impl MockRead
+    {
         fn new(buf: Vec<String>) -> MockRead
         {
             MockRead {
@@ -49,7 +52,8 @@ mod read_to_block {
         }
     }
 
-    impl Read for MockRead {
+    impl Read for MockRead
+    {
         fn read(&mut self, buf: &mut [u8]) -> Result<usize>
         {
             if self.read_cursor || self.inner.is_empty() {

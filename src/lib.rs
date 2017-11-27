@@ -34,9 +34,9 @@
 extern crate bitflags;
 extern crate bytes;
 
+extern crate failure;
 #[macro_use]
 extern crate failure_derive;
-extern crate failure;
 
 extern crate futures;
 extern crate tokio_core;
@@ -54,6 +54,8 @@ extern crate serde;
 
 #[macro_use]
 extern crate siminau_rpc_derive;
+
+extern crate codeconvert;
 
 
 // ===========================================================================

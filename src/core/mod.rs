@@ -15,7 +15,7 @@
 //!
 //! # Types and Traits
 //!
-//! This module provides 2 types and 3 traits as the building blocks of all RPC
+//! This module provides 2 types and 2 traits as the building blocks of all RPC
 //! messages. The types provided are:
 //!
 //! * MessageType
@@ -23,7 +23,6 @@
 //!
 //! And the traits provided are:
 //!
-//! * CodeConvert
 //! * RpcMessage
 //! * RpcMessageType
 //!
@@ -43,11 +42,6 @@
 //! ## Message
 //!
 //! The core base type of all RPC messages.
-//!
-//! ## CodeConvert
-//!
-//! This trait provides a common interface for converting between a number and
-//! a type.
 //!
 //! ## RpcMessage
 //!
@@ -139,6 +133,9 @@ use rmpv::Value;
 
 // Local imports
 
+// Re-exports
+pub use codeconvert::{CodeConvert, CodeValueError};
+
 
 // ===========================================================================
 // Helpers
@@ -146,7 +143,8 @@ use rmpv::Value;
 
 
 // Return the name of a Value variant
-pub fn value_type(arg: &Value) -> String {
+pub fn value_type(arg: &Value) -> String
+{
     let ret = match *arg {
         Value::Nil => "nil",
         Value::Boolean(_) => "bool",
@@ -164,12 +162,19 @@ pub fn value_type(arg: &Value) -> String {
 
 
 #[derive(Debug, Fail)]
-pub enum CheckIntError {
+pub enum CheckIntError
+{
     #[fail(display = "Expected {} but got None", expected)]
-    MissingValue { expected: String },
+    MissingValue
+    {
+        expected: String
+    },
 
     #[fail(display = "Expected value <= {} but got value {}", max_value, value)]
-    ValueTooBig { max_value: u64, value: String },
+    ValueTooBig
+    {
+        max_value: u64, value: String
+    },
 }
 
 
@@ -182,7 +187,8 @@ pub enum CheckIntError {
 /// is returned.
 pub fn check_int(
     val: Option<u64>, max_value: u64, expected: String
-) -> Result<u64, CheckIntError> {
+) -> Result<u64, CheckIntError>
+{
     match val {
         None => Err(CheckIntError::MissingValue { expected: expected }),
         Some(v) if v > max_value => {
@@ -198,63 +204,14 @@ pub fn check_int(
 
 
 // ===========================================================================
-// CodeConvert
-// ===========================================================================
-
-
-#[derive(Fail, Debug)]
-#[fail(display = "Unknown code value: {}", code)]
-pub struct CodeValueError {
-    pub code: u64,
-}
-
-
-/// Allows converting between a number and a type.
-///
-/// The type implementing [`CodeConvert`] will usually be an enum that defines
-/// different codes.
-///
-/// # Assumptions
-///
-/// This trait assumes the following of the implementing enum:
-///
-/// 1. The enum is a C-style enum
-/// 2. The enum's values are unsigned integers
-/// 3. The enum's values are continuous without any gaps ie 0, 1, 2 are valid
-///    values but 0, 2, 4 is not
-///
-/// [`CodeConvert`]: trait.CodeConvert.html
-pub trait CodeConvert<T>: Clone + PartialEq {
-    type int_type;
-
-    /// Convert a number to type T.
-    fn from_number(num: Self::int_type) -> Result<T, CodeValueError>;
-
-    /// Convert a u64 to type T.
-    fn from_u64(num: u64) -> Result<T, CodeValueError>;
-
-    /// Convert type T to a number.
-    fn to_number(&self) -> Self::int_type;
-
-    /// Convert type T to a u64.
-    fn to_u64(&self) -> u64;
-
-    /// Return the maximum number value
-    fn max_number() -> u64;
-
-    /// Cast a u64 number into acceptable int type
-    fn cast_number(n: u64) -> Option<Self::int_type>;
-}
-
-
-// ===========================================================================
 // MessageType
 // ===========================================================================
 
 
 /// Enum defining different types of messages
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum MessageType {
+pub enum MessageType
+{
     /// A message initiating a request.
     Request,
 
@@ -272,7 +229,8 @@ pub enum MessageType {
 
 
 /// Define methods common to all RPC messages
-pub trait RpcMessage {
+pub trait RpcMessage
+{
     /// View the message as a vector of [`rmpv::Value`] objects.
     fn as_vec(&self) -> &Vec<Value>;
 
@@ -280,7 +238,8 @@ pub trait RpcMessage {
     fn as_value(&self) -> &Value;
 
     /// Return the message's type.
-    fn message_type(&self) -> MessageType {
+    fn message_type(&self) -> MessageType
+    {
         let msgtype: u8 = match self.as_vec()[0].as_u64() {
             Some(v) => v as u8,
             None => unreachable!(),
@@ -290,14 +249,16 @@ pub trait RpcMessage {
     }
 
     /// Return the string name of an [`rmpv::Value`] object.
-    fn value_type_name(arg: &Value) -> String {
+    fn value_type_name(arg: &Value) -> String
+    {
         value_type(arg)
     }
 }
 
 
 /// Define methods common to all RPC message types.
-pub trait RpcMessageType {
+pub trait RpcMessageType
+{
     /// Return a reference to the inner message.
     fn as_message(&self) -> &Message;
 }
@@ -311,17 +272,21 @@ pub trait RpcMessageType {
 /// [`Message`]: message/struct.Message.html
 /// [`rmpv::Value`]: https://docs.rs/rmpv/0.4.0/rmpv/enum.Value.html
 #[derive(Debug)]
-pub struct Message {
+pub struct Message
+{
     msg: Value,
 }
 
 
-impl RpcMessage for Message {
-    fn as_vec(&self) -> &Vec<Value> {
+impl RpcMessage for Message
+{
+    fn as_vec(&self) -> &Vec<Value>
+    {
         self.msg.as_array().unwrap()
     }
 
-    fn as_value(&self) -> &Value {
+    fn as_value(&self) -> &Value
+    {
         &self.msg
     }
 }
@@ -329,7 +294,8 @@ impl RpcMessage for Message {
 
 // Message errors
 #[derive(Debug, Fail)]
-pub enum ToMessageError {
+pub enum ToMessageError
+{
     #[fail(display = "expected array length of either 3 or 4, got {}", _0)]
     ArrayLength(usize),
 
@@ -340,7 +306,8 @@ pub enum ToMessageError {
 }
 
 
-impl Message {
+impl Message
+{
     /// Converts an [`rmpv::Value`].
     ///
     /// # Errors
@@ -352,7 +319,8 @@ impl Message {
     /// 3. The array's first item is not a u8
     /// 4. The array's first item is a value greater than the maximum value
     ///    stored in the MessageType enum
-    pub fn from(val: Value) -> Result<Self, ToMessageError> {
+    pub fn from(val: Value) -> Result<Self, ToMessageError>
+    {
         if let Some(array) = val.as_array() {
             let arraylen = array.len();
             if arraylen < 3 || arraylen > 4 {
@@ -376,21 +344,26 @@ impl Message {
 
 
 // Clone impl
-impl Clone for Message {
-    fn clone(&self) -> Self {
+impl Clone for Message
+{
+    fn clone(&self) -> Self
+    {
         Self {
             msg: self.msg.clone(),
         }
     }
 
-    fn clone_from(&mut self, source: &Self) {
+    fn clone_from(&mut self, source: &Self)
+    {
         self.msg = source.as_value().clone();
     }
 }
 
 
-impl From<Message> for Value {
-    fn from(msg: Message) -> Value {
+impl From<Message> for Value
+{
+    fn from(msg: Message) -> Value
+    {
         msg.msg
     }
 }
@@ -402,7 +375,8 @@ impl From<Message> for Value {
 
 
 #[cfg(test)]
-mod tests {
+mod tests
+{
     // std lib imports
 
     // use std::error::Error;
@@ -494,7 +468,8 @@ mod tests {
     // --------------------
 
     // Helper
-    fn mkmessage(msgtype: u8) -> Message {
+    fn mkmessage(msgtype: u8) -> Message
+    {
         let msgtype = Value::from(msgtype);
         let msgid = Value::from(0);
         let msgcode = Value::from(0);
@@ -621,7 +596,8 @@ mod tests {
 
     // Message::message
     #[test]
-    fn message_message_value() {
+    fn message_message_value()
+    {
         let v = Value::from(vec![Value::from(42)]);
         let expected = v.clone();
         let m = Message { msg: v };
@@ -634,7 +610,8 @@ mod tests {
     // Vec<Value> instead of using the from function
     #[test]
     #[should_panic]
-    fn message_as_vec_panic() {
+    fn message_as_vec_panic()
+    {
         let v = Value::from(Value::from(42));
         let m = Message { msg: v };
         m.as_vec();
@@ -642,7 +619,8 @@ mod tests {
 
     // Message::raw_message
     #[test]
-    fn message_as_value() {
+    fn message_as_value()
+    {
         let v = Value::from(42);
         let expected = v.clone();
         let msg = Message { msg: v };
@@ -651,7 +629,8 @@ mod tests {
 
     // If a non-Value::Array is stored then will always return an error
     #[test]
-    fn message_from_non_array_always_err() {
+    fn message_from_non_array_always_err()
+    {
         let v = Value::from(42);
         let errmsg = format!("expected array but got {}", value_type(&v));
         let ret = match Message::from(v) {
@@ -737,7 +716,8 @@ mod tests {
     // A valid value is an array with a length of 3 or 4 and the first item in
     // the array is u8 that is < 3
     #[test]
-    fn message_from_valid_value() {
+    fn message_from_valid_value()
+    {
         let valvec: Vec<Value> = vec![1, 42, 42]
             .iter()
             .map(|v| Value::from(v.clone()))

@@ -19,7 +19,8 @@
 // ===========================================================================
 
 
-mod auth {
+mod auth
+{
 
     // Third party imports
 
@@ -271,7 +272,8 @@ mod auth {
 }
 
 
-mod flush {
+mod flush
+{
     // Third party imports
 
     // use failure::Fail;
@@ -362,7 +364,8 @@ mod flush {
 }
 
 
-mod attach {
+mod attach
+{
     // Third party imports
 
     use failure::Fail;
@@ -692,7 +695,8 @@ mod attach {
 }
 
 
-mod walk {
+mod walk
+{
     // Third party imports
 
     // use failure::Fail;
@@ -807,7 +811,8 @@ mod walk {
 }
 
 
-mod open {
+mod open
+{
     // Third party imports
 
     // use failure::Fail;
@@ -868,7 +873,8 @@ mod open {
 }
 
 
-mod create {
+mod create
+{
     // Third party imports
 
     use failure::Fail;

@@ -39,7 +39,8 @@ pub mod v1;
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum RequestCode {
+pub enum RequestCode
+{
     // Initiate client session by requesting an API version
     //
     // Single argument:
@@ -53,7 +54,8 @@ pub enum RequestCode {
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum ResponseCode {
+pub enum ResponseCode
+{
     // Any error that is generated in response to a request.
     //
     // Single argument:
@@ -70,7 +72,8 @@ pub enum ResponseCode {
 
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum NotifyCode {
+pub enum NotifyCode
+{
     // No more requests will be made
     //
     // No arguments
@@ -97,12 +100,14 @@ pub type Info = NotificationMessage<NotifyCode>;
 // ===========================================================================
 
 
-pub struct RequestBuilder {
+pub struct RequestBuilder
+{
     id: u32,
 }
 
 
-impl RequestBuilder {
+impl RequestBuilder
+{
     pub fn new(msgid: u32) -> RequestBuilder
     {
         RequestBuilder { id: msgid }
@@ -127,12 +132,14 @@ pub fn request(msgid: u32) -> RequestBuilder
 // ===========================================================================
 
 
-pub struct ResponseBuilder<'request> {
+pub struct ResponseBuilder<'request>
+{
     request: &'request Request,
 }
 
 
-impl<'request> ResponseBuilder<'request> {
+impl<'request> ResponseBuilder<'request>
+{
     pub fn new(request: &'request Request) -> ResponseBuilder
     {
         ResponseBuilder { request: request }
@@ -175,7 +182,8 @@ pub fn response(request: &Request) -> ResponseBuilder
 pub struct InfoBuilder;
 
 
-impl InfoBuilder {
+impl InfoBuilder
+{
     pub fn new() -> InfoBuilder
     {
         InfoBuilder
