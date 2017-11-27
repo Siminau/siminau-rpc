@@ -98,6 +98,8 @@ fn mk_code_impl(
 ) -> quote::Tokens
 {
     quote! {
+        use codeconvert::{CodeConvert, CodeValueError};
+
         impl CodeConvert<#name> for #name {
             type int_type = #int_type;
 
