@@ -341,6 +341,8 @@ pub enum ToMessageError {
 
 
 impl Message {
+    // TODO: improve call to check_int since it's possible the array's first
+    // element is not an integer
     /// Converts an [`rmpv::Value`].
     ///
     /// # Errors
@@ -401,6 +403,8 @@ impl From<Message> for Value {
 // ===========================================================================
 
 
+// These unit tests require access to the private msg field of the Message
+// struct. The bulk of tests can be found in the test::core module.
 #[cfg(test)]
 mod tests {
     // std lib imports
@@ -409,15 +413,11 @@ mod tests {
 
     // Third-party imports
 
-    use failure::Fail;
-    use quickcheck::TestResult;
     use rmpv::Value;
 
     // Local imports
 
-    use super::{check_int, value_type, CheckIntError};
-    use super::{CodeConvert, CodeValueError, Message, MessageType, RpcMessage,
-                ToMessageError};
+    use super::{Message, RpcMessage};
 
     // --------------------
     // Decode tests
@@ -433,191 +433,8 @@ mod tests {
     // }
 
     // --------------------
-    // MessageType
-    // --------------------
-    // MessageType::from_number
-    quickcheck! {
-        // MessageType::from_number's Ok value when casted as u8 is equal to
-        // u8 input value
-        fn messagetype_from_number_variant_u8_matches_number(xs: u8) -> TestResult {
-            match MessageType::from_number(xs) {
-                Err(_) => TestResult::discard(),
-                Ok(code) => {
-                    TestResult::from_bool(code as u8 == xs)
-                }
-            }
-        }
-
-        // MessageType::from_number returns error if input value is >= the number
-        // of variants
-        fn messagetype_from_number_invalid_number(xs: u8) -> TestResult {
-            if xs < 3 {
-                return TestResult::discard()
-            }
-            let val = match MessageType::from_number(xs) {
-                Err(e @ CodeValueError { .. }) => {
-                    let errmsg = format!("Unknown code value: {}", xs);
-                    e.to_string() == errmsg
-                }
-                Ok(_) => false,
-            };
-            TestResult::from_bool(val)
-        }
-    }
-
-    // MessageType::to_number
-    quickcheck! {
-        // MessageType::to_number always returns an integer < 3
-        fn messagetype_to_number_lt_3(xs: u8) -> TestResult {
-            if xs > 2 {
-                return TestResult::discard()
-            }
-            let val = MessageType::from_number(xs).unwrap();
-            TestResult::from_bool(val.to_number() < 3)
-        }
-
-        // MessageType::to_number return value converted back to MessageType ==
-        // original MessageType value
-        fn messagetype_to_number_from_number(xs: u8) -> TestResult {
-            if xs > 2 {
-                return TestResult::discard()
-            }
-            let val = MessageType::from_number(xs).unwrap();
-            let after = MessageType::from_number(val.to_number()).unwrap();
-            TestResult::from_bool(val == after)
-        }
-    }
-
-
-    // --------------------
     // Message
     // --------------------
-
-    // Helper
-    fn mkmessage(msgtype: u8) -> Message {
-        let msgtype = Value::from(msgtype);
-        let msgid = Value::from(0);
-        let msgcode = Value::from(0);
-        let msgargs = Value::Nil;
-        let val = Value::from(vec![msgtype, msgid, msgcode, msgargs]);
-        Message::from(val).unwrap()
-    }
-
-
-    // Message::check_int
-    quickcheck! {
-        // val == None always returns an err with given marker
-        fn check_int_none_val(xs: u64) -> bool {
-            let errmsg = "Expected u8 but got None";
-            match check_int(None, xs, "u8".to_owned()) {
-                Err(e @ CheckIntError::MissingValue { .. }) => {
-                    let msg = e.to_string();
-                    &msg[..] == errmsg
-                }
-                _ => false
-            }
-        }
-
-        // val > max value returns an err with given marker
-        fn check_int_val_gt_max_value(val: u64, max_value: u64) -> TestResult {
-            if val <= max_value {
-                return TestResult::discard()
-            }
-
-            let errmsg = format!("Expected value <= {} but got value {}",
-                                 max_value, val);
-            let result = check_int(Some(val), max_value, val.to_string());
-            let val = match result {
-                Err(e @ CheckIntError::ValueTooBig { .. }) => {
-                    let msg = e.to_string();
-                    msg == errmsg
-                }
-                _ => false,
-            };
-            TestResult::from_bool(val)
-        }
-
-        // val <= max returns value
-        fn check_int_val_le_max_value(val: u64, max_value: u64) -> TestResult {
-            if val > max_value {
-                return TestResult::discard()
-            }
-
-            let result = check_int(Some(val), max_value, val.to_string());
-            if let Ok(v) = result {
-                TestResult::from_bool(v == val)
-            } else {
-                TestResult::from_bool(false)
-            }
-        }
-    }
-
-    // Message::message_type
-    quickcheck! {
-        // Known code number returns MessageType variant
-        fn message_message_type_good_code_number(varnum: u8) -> TestResult {
-            if varnum >= 3 {
-                return TestResult::discard()
-            }
-            let expected = MessageType::from_number(varnum).unwrap();
-            let msg = mkmessage(varnum);
-            TestResult::from_bool(msg.message_type() == expected)
-        }
-    }
-
-    use rmpv::{Integer, Utf8String};
-
-    // Message::value_type_name
-    quickcheck! {
-
-        // Return value is never the empty string
-        fn message_value_type_name_return_nonempty_string(i: usize) -> TestResult {
-            let values = vec![
-                Value::Nil,
-                Value::Boolean(true),
-                Value::Integer(Integer::from(42)),
-                Value::F32(42.0),
-                Value::F64(42.0),
-                Value::String(Utf8String::from("hello")),
-                Value::Binary(vec![0, 0]),
-                Value::Array(vec![Value::from(42)]),
-                Value::Map(vec![(Value::from(42), Value::from("ANSWER"))]),
-                Value::Ext(-42, vec![0, 1, 2]),
-            ];
-
-            if i > values.len() - 1 {
-                return TestResult::discard()
-            }
-
-            let choice = &values[i];
-            let ret = Message::value_type_name(choice);
-            TestResult::from_bool(ret.len() > 0)
-        }
-
-        // Return value is expected name of the Value variant
-        fn message_value_type_name_return_expected_string(i: usize) -> TestResult {
-            let values = vec![
-                (Value::Nil, "nil"),
-                (Value::Boolean(true), "bool"),
-                (Value::Integer(Integer::from(42)), "int"),
-                (Value::F32(42.0), "float32"),
-                (Value::F64(42.0), "float64"),
-                (Value::String(Utf8String::from("hello")), "str"),
-                (Value::Binary(vec![0, 0]), "bytearray"),
-                (Value::Array(vec![Value::from(42)]), "array"),
-                (Value::Map(vec![(Value::from(42), Value::from("ANSWER"))]), "map"),
-                (Value::Ext(-42, vec![0, 1, 2]), "ext"),
-            ];
-
-            if i > values.len() - 1 {
-                return TestResult::discard()
-            }
-
-            let choice = &values[i];
-            let ret = Message::value_type_name(&choice.0);
-            TestResult::from_bool(ret == choice.1)
-        }
-    }
 
     // Message::message
     #[test]
@@ -647,109 +464,6 @@ mod tests {
         let expected = v.clone();
         let msg = Message { msg: v };
         assert_eq!(msg.as_value(), &expected);
-    }
-
-    // If a non-Value::Array is stored then will always return an error
-    #[test]
-    fn message_from_non_array_always_err() {
-        let v = Value::from(42);
-        let errmsg = format!("expected array but got {}", value_type(&v));
-        let ret = match Message::from(v) {
-            Err(e @ ToMessageError::NotArray(_)) => errmsg == e.to_string(),
-            _ => false,
-        };
-        assert!(ret)
-    }
-
-    quickcheck! {
-        fn message_from_invalid_array_length(val: Vec<u8>) -> TestResult {
-            let arraylen = val.len();
-            if arraylen == 3 || arraylen == 4 {
-                return TestResult::discard()
-            }
-
-            // GIVEN
-            // an array with length either < 3 or > 4
-            let valvec: Vec<Value> = val.iter()
-                .map(|v| Value::from(v.clone())).collect();
-            let array = Value::from(valvec);
-
-            // WHEN
-            // creating a message using from method
-            let result = Message::from(array);
-
-            // THEN
-            // an appropriate error is returned
-            let errmsg = format!("expected array length of either 3 or 4, got {}",
-                                 arraylen);
-            let val = match result {
-                Err(e @ ToMessageError::ArrayLength(_)) => {
-                    errmsg == e.to_string()
-                },
-                _ => false
-            };
-            TestResult::from_bool(val)
-        }
-
-        fn message_from_invalid_messagetype_number(code: u64) -> TestResult {
-            let maxval = MessageType::max_number() as u64;
-            if code <= maxval {
-                return TestResult::discard()
-            }
-
-            // GIVEN
-            // array with invalid code number (ie code number is >
-            // u8::max_value()
-            let array: Vec<Value> = vec![code, 42, 42].iter()
-                .map(|v| Value::from(v.clone())).collect();
-
-            // WHEN
-            // creating a message via Message::from()
-            let cause_errmsg = format!("Expected value <= 2 but got value {}", code);
-            let result = Message::from(Value::from(array));
-
-            // THEN
-            // MessageError::InvalidType error is returned
-            let val = match result {
-                Err(e @ ToMessageError::InvalidType(_)) => {
-
-                    // Check error
-                    let ret = e.to_string() == "Invalid message type";
-
-                    // Get cause error
-                    let cause = e.cause().unwrap();
-
-                    // No further causes
-                    let ret = ret && cause.cause().is_none();
-
-                    // Check cause message
-                    let expected = cause.to_string() == cause_errmsg;
-
-                    // Return result of checks
-                    ret && expected
-                }
-                _ => false
-            };
-            TestResult::from_bool(val)
-        }
-    }
-
-    // A valid value is an array with a length of 3 or 4 and the first item in
-    // the array is u8 that is < 3
-    #[test]
-    fn message_from_valid_value() {
-        let valvec: Vec<Value> = vec![1, 42, 42]
-            .iter()
-            .map(|v| Value::from(v.clone()))
-            .collect();
-        let array = Value::from(valvec);
-        let expected = array.clone();
-
-        let ret = match Message::from(array) {
-            Ok(m) => m.as_value() == &expected,
-            _ => false,
-        };
-        assert!(ret)
     }
 }
 

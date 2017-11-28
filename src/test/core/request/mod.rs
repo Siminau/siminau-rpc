@@ -1,4 +1,4 @@
-// src/test/mod.rs
+// src/test/core/request/mod.rs
 // Copyright (C) 2017 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
@@ -8,9 +8,20 @@
 // ===========================================================================
 
 
-mod core;
-mod future;
-mod message;
+mod requestmessage;
+mod rpcrequest;
+
+// ===========================================================================
+// Imports
+// ===========================================================================
+
+
+// Stdlib imports
+
+// Third-party imports
+
+// Local imports
+use super::TestEnum;
 
 
 // ===========================================================================
