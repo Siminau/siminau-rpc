@@ -92,12 +92,13 @@ use std::marker::PhantomData;
 
 // Third-party imports
 
+use failure::Fail;
 use rmpv::Value;
 
 // Local imports
 
 use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
-           MessageType, RpcMessage, RpcMessageType};
+           MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
 
 // ===========================================================================
@@ -108,14 +109,16 @@ use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
 #[derive(Debug, Fail)]
 #[fail(display = "Expected notification message type value {}, got {}",
        expected_type, msgtype)]
-pub struct NoticeTypeError {
+pub struct NoticeTypeError
+{
     expected_type: u8,
     msgtype: u8,
 }
 
 
 #[derive(Debug, Fail)]
-pub enum NoticeCodeError {
+pub enum NoticeCodeError
+{
     #[fail(display = "Invalid notification code value")]
     InvalidValue(#[cause] CheckIntError),
 
@@ -131,13 +134,15 @@ pub enum NoticeCodeError {
 #[derive(Debug, Fail)]
 #[fail(display = "Expected array for notification arguments but got {}",
        value_type)]
-pub struct NoticeArgsError {
+pub struct NoticeArgsError
+{
     value_type: String,
 }
 
 
 #[derive(Debug, Fail)]
-pub enum ToNoticeError {
+pub enum ToNoticeError
+{
     #[fail(display = "Expected array length of 3, got {}", _0)]
     ArrayLength(usize),
 
@@ -149,6 +154,18 @@ pub enum ToNoticeError {
 
     #[fail(display = "Invalid notification message arguments")]
     InvalidArgs(#[cause] NoticeArgsError),
+
+    #[fail(display = "Unable to convert message")]
+    MessageError(#[cause] ToMessageError),
+}
+
+
+impl From<ToMessageError> for ToNoticeError
+{
+    fn from(e: ToMessageError) -> ToNoticeError
+    {
+        ToNoticeError::MessageError(e)
+    }
 }
 
 
@@ -183,18 +200,21 @@ pub enum ToNoticeError {
 /// assert_eq!(req.message_args(), &vec![Value::from(42)]);
 /// # }
 /// ```
-pub trait RpcNotice<C>: RpcMessage
+pub trait RpcNotice<C, E>: RpcMessage<E>
 where
     C: CodeConvert<C>,
+    E: Fail + From<ToMessageError>,
 {
-    fn message_code(&self) -> C {
+    fn message_code(&self) -> C
+    {
         let msgcode = &self.as_vec()[1];
         let msgcode = msgcode.as_u64().unwrap();
         let msgcode = C::cast_number(msgcode).unwrap();
         C::from_number(msgcode).unwrap()
     }
 
-    fn message_args(&self) -> &Vec<Value> {
+    fn message_args(&self) -> &Vec<Value>
+    {
         let msgargs = &self.as_vec()[2];
         msgargs.as_array().unwrap()
     }
@@ -203,81 +223,25 @@ where
 
 /// A representation of the Notification RPC message type.
 #[derive(Debug)]
-pub struct NotificationMessage<C> {
+pub struct NotificationMessage<C>
+{
     msg: Message,
     msgtype: PhantomData<C>,
 }
 
 
-impl<C> RpcMessage for NotificationMessage<C>
+impl<C> RpcMessage<ToNoticeError> for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
-    fn as_vec(&self) -> &Vec<Value> {
+    fn as_vec(&self) -> &Vec<Value>
+    {
         self.msg.as_vec()
     }
 
-    fn as_value(&self) -> &Value {
+    fn as_value(&self) -> &Value
+    {
         self.msg.as_value()
-    }
-}
-
-
-impl<C> RpcMessageType for NotificationMessage<C>
-where
-    C: CodeConvert<C>,
-{
-    fn as_message(&self) -> &Message {
-        &self.msg
-    }
-}
-
-
-impl<C> RpcNotice<C> for NotificationMessage<C>
-where
-    C: CodeConvert<C>,
-{
-}
-
-
-impl<C> NotificationMessage<C>
-where
-    C: CodeConvert<C>,
-{
-    /// Create a brand new NotificationMessage object.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{MessageType, RpcMessage};
-    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
-    ///
-    /// # fn main() {
-    /// // Create Notice alias
-    /// type Notice = NotificationMessage<MessageType>;
-    ///
-    /// // Re-use MessageType as message code
-    /// let req = Notice::new(MessageType::Notification,
-    ///                       vec![Value::from(42)]);
-    /// # }
-    /// ```
-    pub fn new(notifycode: C, args: Vec<Value>) -> Self {
-        let msgtype = Value::from(MessageType::Notification as u8);
-        let notifycode = Value::from(notifycode.to_u64());
-        let msgargs = Value::from(args);
-        let msgval = Value::from(vec![msgtype, notifycode, msgargs]);
-
-        match Message::from(msgval) {
-            Ok(msg) => Self {
-                msg: msg,
-                msgtype: PhantomData,
-            },
-            Err(_) => unreachable!(),
-        }
     }
 
     /// Create a NotificationMessage from a Message
@@ -318,7 +282,8 @@ where
     /// let req = Notice::from(msg).unwrap();
     /// # }
     /// ```
-    pub fn from(msg: Message) -> Result<Self, ToNoticeError> {
+    fn from_message(msg: Message) -> Result<Self, ToNoticeError>
+    {
         // Notifications is always represented as an array of 4 values
         {
             // Requests is always represented as an array of 3 values
@@ -345,12 +310,118 @@ where
             msgtype: PhantomData,
         })
     }
+}
+
+
+impl<C> RpcMessageType for NotificationMessage<C>
+where
+    C: CodeConvert<C>,
+{
+    fn as_message(&self) -> &Message
+    {
+        &self.msg
+    }
+}
+
+
+impl<C> RpcNotice<C, ToNoticeError> for NotificationMessage<C>
+where
+    C: CodeConvert<C>,
+{
+}
+
+
+impl<C> NotificationMessage<C>
+where
+    C: CodeConvert<C>,
+{
+    /// Create a brand new NotificationMessage object.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rmpv;
+    /// extern crate siminau_rpc;
+    ///
+    /// use rmpv::Value;
+    /// use siminau_rpc::core::{MessageType, RpcMessage};
+    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
+    ///
+    /// # fn main() {
+    /// // Create Notice alias
+    /// type Notice = NotificationMessage<MessageType>;
+    ///
+    /// // Re-use MessageType as message code
+    /// let req = Notice::new(MessageType::Notification,
+    ///                       vec![Value::from(42)]);
+    /// # }
+    /// ```
+    pub fn new(notifycode: C, args: Vec<Value>) -> Self
+    {
+        let msgtype = Value::from(MessageType::Notification as u8);
+        let notifycode = Value::from(notifycode.to_u64());
+        let msgargs = Value::from(args);
+        let msgval = Value::from(vec![msgtype, notifycode, msgargs]);
+
+        match Message::from(msgval) {
+            Ok(msg) => Self {
+                msg: msg,
+                msgtype: PhantomData,
+            },
+            Err(_) => unreachable!(),
+        }
+    }
+
+    // TODO: Should this be removed?
+    /// Create a NotificationMessage from a Message
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if any of the following are true:
+    ///
+    /// 1. The message is an array with a len != 3
+    /// 2. The message's type parameter is not MessageType::Notification
+    /// 3. The message's code parameter cannot be converted into the
+    ///    notification's expected code type
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rmpv;
+    /// extern crate siminau_rpc;
+    ///
+    /// use rmpv::Value;
+    /// use siminau_rpc::core::{CodeConvert, Message, MessageType,
+    ///                            RpcMessage};
+    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
+    ///
+    /// # fn main() {
+    /// // Create an alias for NotificationMessage, re-using `MessageType` as the
+    /// // message code.
+    /// type Notice = NotificationMessage<MessageType>;
+    ///
+    /// // Build Message
+    /// let msgtype = Value::from(MessageType::Notification.to_number());
+    /// let msgcode = Value::from(MessageType::Request.to_number());
+    /// let msgargs = Value::Array(vec![Value::from(9001)]);
+    /// let msgval = Value::Array(vec![msgtype, msgcode, msgargs]);
+    /// let msg = Message::from(msgval).unwrap();
+    ///
+    /// // Turn the message into a Notice type
+    /// let req = Notice::from(msg).unwrap();
+    /// # }
+    /// ```
+    pub fn from(msg: Message) -> Result<Self, ToNoticeError>
+    {
+        Self::from_message(msg)
+    }
 
     // Checks that the message type parameter of a Notification message is
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_type(msgtype: &Value) -> Result<(), NoticeTypeError> {
+    fn check_message_type(msgtype: &Value) -> Result<(), NoticeTypeError>
+    {
         let msgtype = msgtype.as_u64().unwrap() as u8;
         let expected_msgtype = MessageType::Notification.to_number();
         if msgtype != expected_msgtype {
@@ -368,7 +439,8 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_code(msgcode: &Value) -> Result<(), NoticeCodeError> {
+    fn check_message_code(msgcode: &Value) -> Result<(), NoticeCodeError>
+    {
         let msgcode =
             check_int(msgcode.as_u64(), C::max_number(), "a value".to_string())
                 .map_err(|e| NoticeCodeError::InvalidValue(e))?;
@@ -393,7 +465,8 @@ where
     // valid.
     //
     // This is a private method used by the public from() method
-    fn check_message_args(msgargs: &Value) -> Result<(), NoticeArgsError> {
+    fn check_message_args(msgargs: &Value) -> Result<(), NoticeArgsError>
+    {
         match msgargs.as_array() {
             Some(_) => Ok(()),
             None => {
@@ -408,16 +481,20 @@ where
 
 
 // Also implements Into<Message> for NotificationMessage
-impl<C> From<NotificationMessage<C>> for Message {
-    fn from(req: NotificationMessage<C>) -> Message {
+impl<C> From<NotificationMessage<C>> for Message
+{
+    fn from(req: NotificationMessage<C>) -> Message
+    {
         req.msg
     }
 }
 
 
 // Also implements Into<Value> for NotificationMessage
-impl<C> From<NotificationMessage<C>> for Value {
-    fn from(req: NotificationMessage<C>) -> Value {
+impl<C> From<NotificationMessage<C>> for Value
+{
+    fn from(req: NotificationMessage<C>) -> Value
+    {
         req.msg.into()
     }
 }

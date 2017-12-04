@@ -135,6 +135,7 @@ use std::clone::Clone;
 
 // Third-party imports
 
+use failure::Fail;
 use rmpv::Value;
 
 // Local imports
@@ -146,7 +147,8 @@ use rmpv::Value;
 
 
 // Return the name of a Value variant
-pub fn value_type(arg: &Value) -> String {
+pub fn value_type(arg: &Value) -> String
+{
     let ret = match *arg {
         Value::Nil => "nil",
         Value::Boolean(_) => "bool",
@@ -164,12 +166,19 @@ pub fn value_type(arg: &Value) -> String {
 
 
 #[derive(Debug, Fail)]
-pub enum CheckIntError {
+pub enum CheckIntError
+{
     #[fail(display = "Expected {} but got None", expected)]
-    MissingValue { expected: String },
+    MissingValue
+    {
+        expected: String
+    },
 
     #[fail(display = "Expected value <= {} but got value {}", max_value, value)]
-    ValueTooBig { max_value: u64, value: String },
+    ValueTooBig
+    {
+        max_value: u64, value: String
+    },
 }
 
 
@@ -182,7 +191,8 @@ pub enum CheckIntError {
 /// is returned.
 pub fn check_int(
     val: Option<u64>, max_value: u64, expected: String
-) -> Result<u64, CheckIntError> {
+) -> Result<u64, CheckIntError>
+{
     match val {
         None => Err(CheckIntError::MissingValue { expected: expected }),
         Some(v) if v > max_value => {
@@ -204,7 +214,8 @@ pub fn check_int(
 
 #[derive(Fail, Debug)]
 #[fail(display = "Unknown code value: {}", code)]
-pub struct CodeValueError {
+pub struct CodeValueError
+{
     pub code: u64,
 }
 
@@ -224,7 +235,8 @@ pub struct CodeValueError {
 ///    values but 0, 2, 4 is not
 ///
 /// [`CodeConvert`]: trait.CodeConvert.html
-pub trait CodeConvert<T>: Clone + PartialEq {
+pub trait CodeConvert<T>: Clone + PartialEq
+{
     type int_type;
 
     /// Convert a number to type T.
@@ -254,7 +266,8 @@ pub trait CodeConvert<T>: Clone + PartialEq {
 
 /// Enum defining different types of messages
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum MessageType {
+pub enum MessageType
+{
     /// A message initiating a request.
     Request,
 
@@ -272,15 +285,34 @@ pub enum MessageType {
 
 
 /// Define methods common to all RPC messages
-pub trait RpcMessage {
+pub trait RpcMessage<E>
+where
+    E: Fail + From<ToMessageError>,
+{
     /// View the message as a vector of [`rmpv::Value`] objects.
     fn as_vec(&self) -> &Vec<Value>;
 
     /// Return a reference to the internally owned [`rmpv::Value`] object.
     fn as_value(&self) -> &Value;
 
+    /// Create a new message from a Message object
+    fn from_message(Message) -> Result<Self, E>
+    where
+        Self: Sized;
+
+    /// Create a new message from a [`rmpv::Value`] object
+    fn from_value(v: Value) -> Result<Self, E>
+    where
+        Self: Sized,
+    {
+        let msg = Message::from_value(v).map_err(|e| E::from(e))?;
+
+        Self::from_message(msg)
+    }
+
     /// Return the message's type.
-    fn message_type(&self) -> MessageType {
+    fn message_type(&self) -> MessageType
+    {
         let msgtype: u8 = match self.as_vec()[0].as_u64() {
             Some(v) => v as u8,
             None => unreachable!(),
@@ -290,14 +322,16 @@ pub trait RpcMessage {
     }
 
     /// Return the string name of an [`rmpv::Value`] object.
-    fn value_type_name(arg: &Value) -> String {
+    fn value_type_name(arg: &Value) -> String
+    {
         value_type(arg)
     }
 }
 
 
 /// Define methods common to all RPC message types.
-pub trait RpcMessageType {
+pub trait RpcMessageType
+{
     /// Return a reference to the inner message.
     fn as_message(&self) -> &Message;
 }
@@ -311,36 +345,24 @@ pub trait RpcMessageType {
 /// [`Message`]: message/struct.Message.html
 /// [`rmpv::Value`]: https://docs.rs/rmpv/0.4.0/rmpv/enum.Value.html
 #[derive(Debug)]
-pub struct Message {
+pub struct Message
+{
     msg: Value,
 }
 
 
-impl RpcMessage for Message {
-    fn as_vec(&self) -> &Vec<Value> {
+impl RpcMessage<ToMessageError> for Message
+{
+    fn as_vec(&self) -> &Vec<Value>
+    {
         self.msg.as_array().unwrap()
     }
 
-    fn as_value(&self) -> &Value {
+    fn as_value(&self) -> &Value
+    {
         &self.msg
     }
-}
 
-
-// Message errors
-#[derive(Debug, Fail)]
-pub enum ToMessageError {
-    #[fail(display = "expected array length of either 3 or 4, got {}", _0)]
-    ArrayLength(usize),
-
-    #[fail(display = "Invalid message type")]
-    InvalidType(#[cause] CheckIntError),
-
-    #[fail(display = "expected array but got {}", _0)] NotArray(String),
-}
-
-
-impl Message {
     // TODO: improve call to check_int since it's possible the array's first
     // element is not an integer
     /// Converts an [`rmpv::Value`].
@@ -354,7 +376,8 @@ impl Message {
     /// 3. The array's first item is not a u8
     /// 4. The array's first item is a value greater than the maximum value
     ///    stored in the MessageType enum
-    pub fn from(val: Value) -> Result<Self, ToMessageError> {
+    fn from_value(val: Value) -> Result<Self, ToMessageError>
+    {
         if let Some(array) = val.as_array() {
             let arraylen = array.len();
             if arraylen < 3 || arraylen > 4 {
@@ -374,25 +397,72 @@ impl Message {
         // Return Message object
         Ok(Self { msg: val })
     }
+
+    fn from_message(msg: Message) -> Result<Self, ToMessageError>
+    {
+        Self::from_value(msg.into())
+    }
+}
+
+
+// Message errors
+#[derive(Debug, Fail)]
+pub enum ToMessageError
+{
+    #[fail(display = "expected array length of either 3 or 4, got {}", _0)]
+    ArrayLength(usize),
+
+    #[fail(display = "Invalid message type")]
+    InvalidType(#[cause] CheckIntError),
+
+    #[fail(display = "expected array but got {}", _0)] NotArray(String),
+}
+
+
+impl Message
+{
+    // TODO: improve call to check_int since it's possible the array's first
+    // element is not an integer
+    // TODO: should this be removed?
+    /// Converts an [`rmpv::Value`].
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if any of the following are true:
+    ///
+    /// 1. The value is not an array
+    /// 2. The length of the array is less than 3 or greater than 4
+    /// 3. The array's first item is not a u8
+    /// 4. The array's first item is a value greater than the maximum value
+    ///    stored in the MessageType enum
+    pub fn from(val: Value) -> Result<Self, ToMessageError>
+    {
+        Self::from_value(val)
+    }
 }
 
 
 // Clone impl
-impl Clone for Message {
-    fn clone(&self) -> Self {
+impl Clone for Message
+{
+    fn clone(&self) -> Self
+    {
         Self {
             msg: self.msg.clone(),
         }
     }
 
-    fn clone_from(&mut self, source: &Self) {
+    fn clone_from(&mut self, source: &Self)
+    {
         self.msg = source.as_value().clone();
     }
 }
 
 
-impl From<Message> for Value {
-    fn from(msg: Message) -> Value {
+impl From<Message> for Value
+{
+    fn from(msg: Message) -> Value
+    {
         msg.msg
     }
 }
@@ -406,7 +476,8 @@ impl From<Message> for Value {
 // These unit tests require access to the private msg field of the Message
 // struct. The bulk of tests can be found in the test::core module.
 #[cfg(test)]
-mod tests {
+mod tests
+{
     // std lib imports
 
     // use std::error::Error;
@@ -438,7 +509,8 @@ mod tests {
 
     // Message::message
     #[test]
-    fn message_message_value() {
+    fn message_message_value()
+    {
         let v = Value::from(vec![Value::from(42)]);
         let expected = v.clone();
         let m = Message { msg: v };
@@ -451,7 +523,8 @@ mod tests {
     // Vec<Value> instead of using the from function
     #[test]
     #[should_panic]
-    fn message_as_vec_panic() {
+    fn message_as_vec_panic()
+    {
         let v = Value::from(Value::from(42));
         let m = Message { msg: v };
         m.as_vec();
@@ -459,7 +532,8 @@ mod tests {
 
     // Message::raw_message
     #[test]
-    fn message_as_value() {
+    fn message_as_value()
+    {
         let v = Value::from(42);
         let expected = v.clone();
         let msg = Message { msg: v };
