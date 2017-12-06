@@ -608,6 +608,178 @@ mod rpcresponse {
     }
 }
 
+mod convert_bytes {
+    // Stdlib imports
+
+    // Third-party imports
+    use bytes::BytesMut;
+    use rmpv::Value;
+
+    // Local imports
+
+    use core::{AsBytes, FromBytes, FromBytesError, RpcMessage};
+
+    // Helpers
+
+    use test::core::decode;
+    use super::{Response, TestError};
+
+    #[test]
+    fn serialize() {
+        // --------------------
+        // GIVEN
+        // a valid ResponseMessage
+        // --------------------
+        let msg = Response::new(42, TestError::Two, Value::from(9001));
+
+        // --------------------
+        // WHEN
+        // ResponseMessage::as_bytes() is called
+        // --------------------
+        let result = msg.as_bytes();
+
+        // --------------------
+        // THEN
+        // a valid Bytes object is returned
+        // --------------------
+        let mut buf = result.try_mut().unwrap();
+        let expected = decode(&mut buf).unwrap();
+        assert_eq!(&expected, msg.as_value());
+    }
+
+    #[test]
+    fn deserialize() {
+        // --------------------
+        // GIVEN
+        // an empty BytesMut buffer and
+        // a valid ResponseMessage and
+        // the message is serialized into msgpack
+        // --------------------
+        let msgargs = Value::from(9001);
+        let msg = Response::new(42, TestError::One, msgargs);
+        let expected = msg.clone();
+        let mut msgpack = msg.as_bytes().try_mut().unwrap();
+
+        // --------------------
+        // WHEN
+        // ResponseMessage::from_bytes() is called with the msgpack bytes
+        // --------------------
+        let result = Response::from_bytes(&mut msgpack);
+
+        // --------------------
+        // THEN
+        // the a message object is returned and
+        // the msg is equal to the original message
+        // --------------------
+        match result {
+            Ok(Some(msg)) => assert_eq!(msg, expected),
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn deserialize_nobytes() {
+        // --------------------
+        // GIVEN
+        // an empty BytesMut buffer and
+        // --------------------
+        let mut buf = BytesMut::new();
+
+        // --------------------
+        // WHEN
+        // ResponseMessage::from_bytes() is called with the empty buffer
+        // --------------------
+        let result = Response::from_bytes(&mut buf);
+
+        // --------------------
+        // THEN
+        // None is returned
+        // --------------------
+        let val = match result {
+            Ok(None) => true,
+            _ => false,
+        };
+
+        assert!(val);
+    }
+
+    #[test]
+    fn deserialize_incomplete_message() {
+        // --------------------
+        // GIVEN
+        // an empty BytesMut buffer and
+        // a valid ResponseMessage and
+        // the message is serialized into msgpack bytes
+        // and some bytes are discarded
+        // --------------------
+        let msgargs = Value::from(9001);
+        let msg = Response::new(42, TestError::One, msgargs);
+        let mut msgpack = msg.as_bytes().try_mut().unwrap();
+
+        // Make sure we have bytes
+        assert!(!msgpack.is_empty());
+
+        // Discard some bytes to make message bytes incomplete
+        let size = msgpack.len() - 2;
+        msgpack.truncate(size);
+
+        // --------------------
+        // WHEN
+        // ResponseMessage::from_bytes() is called with the buffer
+        // --------------------
+        let result = Response::from_bytes(&mut msgpack);
+
+        // --------------------
+        // THEN
+        // None is returned
+        // --------------------
+        let val = match result {
+            Ok(None) => true,
+            _ => false,
+        };
+
+        assert!(val);
+    }
+
+    #[test]
+    fn deserialize_invalid_message() {
+        // --------------------
+        // GIVEN
+        // an empty BytesMut buffer and
+        // a valid ResponseMessage and
+        // the message is serialized into msgpack bytes
+        // and half of the bytes are discarded
+        // --------------------
+        let msgargs = Value::from(9001);
+        let msg = Response::new(42, TestError::Three, msgargs);
+        let mut msgpack = msg.as_bytes().try_mut().unwrap();
+
+        // Make sure we have bytes
+        assert!(!msgpack.is_empty());
+
+        // Discard half of the bytes; this should cause an invalid marker error
+        // for this specific response message
+        let size = msgpack.len() / 2;
+        msgpack.truncate(size);
+
+        // --------------------
+        // WHEN
+        // ResponseMessage::from_bytes() is called with the buffer
+        // --------------------
+        let result = Response::from_bytes(&mut msgpack);
+
+        // --------------------
+        // THEN
+        // None is returned
+        // --------------------
+        let val = match result {
+            Err(FromBytesError::InvalidMarkerRead(_)) => true,
+            _ => false,
+        };
+
+        assert!(val);
+    }
+}
 
 // ===========================================================================
 //

@@ -96,7 +96,6 @@ use std::marker::PhantomData;
 
 // Third-party imports
 
-use failure::Fail;
 use rmpv::Value;
 
 // Local imports
@@ -203,10 +202,9 @@ impl From<ToMessageError> for ToResponseError
 /// assert_eq!(req.result(), &Value::from(9001));
 /// # }
 /// ```
-pub trait RpcResponse<C, E>: RpcMessage<E>
+pub trait RpcResponse<C>: RpcMessage
 where
     C: CodeConvert<C>,
-    E: Fail + From<ToMessageError>,
 {
     fn message_id(&self) -> u32
     {
@@ -231,7 +229,7 @@ where
 
 
 /// A representation of the Response RPC message type.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ResponseMessage<C>
 {
     msg: Message,
@@ -239,10 +237,12 @@ pub struct ResponseMessage<C>
 }
 
 
-impl<C> RpcMessage<ToResponseError> for ResponseMessage<C>
+impl<C> RpcMessage for ResponseMessage<C>
 where
     C: CodeConvert<C>,
 {
+    type Err = ToResponseError;
+
     fn as_vec(&self) -> &Vec<Value>
     {
         self.msg.as_vec()
@@ -335,7 +335,7 @@ where
 }
 
 
-impl<C> RpcResponse<C, ToResponseError> for ResponseMessage<C>
+impl<C> RpcResponse<C> for ResponseMessage<C>
 where
     C: CodeConvert<C>,
 {

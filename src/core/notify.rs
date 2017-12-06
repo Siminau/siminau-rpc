@@ -92,7 +92,6 @@ use std::marker::PhantomData;
 
 // Third-party imports
 
-use failure::Fail;
 use rmpv::Value;
 
 // Local imports
@@ -200,10 +199,9 @@ impl From<ToMessageError> for ToNoticeError
 /// assert_eq!(req.message_args(), &vec![Value::from(42)]);
 /// # }
 /// ```
-pub trait RpcNotice<C, E>: RpcMessage<E>
+pub trait RpcNotice<C>: RpcMessage
 where
     C: CodeConvert<C>,
-    E: Fail + From<ToMessageError>,
 {
     fn message_code(&self) -> C
     {
@@ -222,7 +220,7 @@ where
 
 
 /// A representation of the Notification RPC message type.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NotificationMessage<C>
 {
     msg: Message,
@@ -230,10 +228,12 @@ pub struct NotificationMessage<C>
 }
 
 
-impl<C> RpcMessage<ToNoticeError> for NotificationMessage<C>
+impl<C> RpcMessage for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
+    type Err = ToNoticeError;
+
     fn as_vec(&self) -> &Vec<Value>
     {
         self.msg.as_vec()
@@ -324,7 +324,7 @@ where
 }
 
 
-impl<C> RpcNotice<C, ToNoticeError> for NotificationMessage<C>
+impl<C> RpcNotice<C> for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {

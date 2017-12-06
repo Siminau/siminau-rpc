@@ -132,11 +132,15 @@ pub mod notify;
 // Stdlib imports
 
 use std::clone::Clone;
+use std::io;
 
 // Third-party imports
 
+use bytes::{Bytes, BytesMut};
 use failure::Fail;
+use rmps::{decode, Deserializer, Serializer};
 use rmpv::Value;
+use serde::{Deserialize, Serialize};
 
 // Local imports
 
@@ -280,15 +284,15 @@ pub enum MessageType
 
 
 // ===========================================================================
-// Message
+// Message traits
 // ===========================================================================
 
 
 /// Define methods common to all RPC messages
-pub trait RpcMessage<E>
-where
-    E: Fail + From<ToMessageError>,
+pub trait RpcMessage
 {
+    type Err: Fail + From<ToMessageError>;
+
     /// View the message as a vector of [`rmpv::Value`] objects.
     fn as_vec(&self) -> &Vec<Value>;
 
@@ -296,16 +300,16 @@ where
     fn as_value(&self) -> &Value;
 
     /// Create a new message from a Message object
-    fn from_message(Message) -> Result<Self, E>
+    fn from_message(Message) -> Result<Self, Self::Err>
     where
         Self: Sized;
 
     /// Create a new message from a [`rmpv::Value`] object
-    fn from_value(v: Value) -> Result<Self, E>
+    fn from_value(v: Value) -> Result<Self, Self::Err>
     where
         Self: Sized,
     {
-        let msg = Message::from_value(v).map_err(|e| E::from(e))?;
+        let msg = Message::from_value(v).map_err(|e| Self::Err::from(e))?;
 
         Self::from_message(msg)
     }
@@ -321,11 +325,10 @@ where
             .expect(&format!("bad msgtype? {}", msgtype))
     }
 
-    /// Return the string name of an [`rmpv::Value`] object.
-    fn value_type_name(arg: &Value) -> String
-    {
-        value_type(arg)
-    }
+    // /// Return the string name of an [`rmpv::Value`] object.
+    // fn value_type_name(arg: &Value) -> String {
+    //     value_type(arg)
+    // }
 }
 
 
@@ -337,6 +340,145 @@ pub trait RpcMessageType
 }
 
 
+pub trait AsBytes<V>
+    where V: AsRef<[u8]>,
+{
+    fn as_bytes(&self) -> V;
+}
+
+
+impl<T> AsBytes<Bytes> for T
+    where T: RpcMessage,
+{
+    // TODO: should there be an unwrap here?
+    fn as_bytes(&self) -> Bytes {
+        let mut tmpbuf = Vec::new();
+        let msg = self.as_value();
+        msg.serialize(&mut Serializer::new(&mut tmpbuf)).unwrap();
+        let mut buf = Bytes::with_capacity(tmpbuf.len());
+        buf.extend_from_slice(&tmpbuf[..]);
+        buf
+    }
+}
+
+
+#[derive(Debug, Fail)]
+pub enum FromBytesError<E>
+    where E: Fail
+{
+    #[fail(display = "MsgPack error: invalid marker")]
+    InvalidMarkerRead(#[cause] io::Error),
+
+    #[fail(display = "MsgPack error: invalid data")]
+    InvalidDataRead(#[cause] io::Error),
+
+    #[fail(display = "MsgPack error: type mismatch")]
+    TypeMismatch(#[cause] decode::Error),
+
+    #[fail(display = "MsgPack error: value out of range")]
+    OutOfRange,
+
+    #[fail(display = "MsgPack error: length mismatch {}", _0)]
+    LengthMismatch(u32),
+
+    #[fail(display = "MsgPack error: {}", _0)]
+    Uncategorized(String),
+
+    #[fail(display = "MsgPack syntax error: {}", _0)]
+    Syntax(String),
+
+    #[fail(display = "MsgPack utf-8 error: invalid byte starts at {}", _0)]
+    Utf8Error(usize),
+
+    #[fail(display = "MsgPack error: depth limit exceeded")]
+    DepthLimitExceeded,
+
+    #[fail(display = "Invalid message")]
+    InvalidMessage(#[cause] E),
+}
+
+
+impl<E> From<decode::Error> for FromBytesError<E>
+    where E: Fail
+{
+    fn from(e: decode::Error) -> FromBytesError<E> {
+        match e {
+            decode::Error::InvalidMarkerRead(err) => FromBytesError::InvalidMarkerRead(err),
+            decode::Error::InvalidDataRead(err) => FromBytesError::InvalidDataRead(err),
+            err @ decode::Error::TypeMismatch(_) => FromBytesError::TypeMismatch(err),
+            decode::Error::OutOfRange => FromBytesError::OutOfRange,
+            decode::Error::LengthMismatch(v) => FromBytesError::LengthMismatch(v),
+            decode::Error::Uncategorized(v) => FromBytesError::Uncategorized(v),
+            decode::Error::Syntax(v) => FromBytesError::Syntax(v),
+            decode::Error::Utf8Error(utferr) => {
+                let invalid_byte = utferr.valid_up_to();
+                FromBytesError::Utf8Error(invalid_byte)
+            },
+            decode::Error::DepthLimitExceeded => FromBytesError::DepthLimitExceeded,
+        }
+    }
+}
+
+
+pub trait FromBytes<T, E>
+    where
+        T: RpcMessage,
+        E: Fail + From<ToMessageError>,
+{
+    fn from_bytes(&mut BytesMut) -> Result<Option<T>, FromBytesError<E>>;
+}
+
+
+impl<T, E> FromBytes<T, E> for T
+    where T: RpcMessage<Err = E>,
+          E: Fail + From<ToMessageError>,
+{
+    fn from_bytes(buf: &mut BytesMut) -> Result<Option<T>, FromBytesError<E>> {
+        let result;
+        let curpos: usize;
+
+        // If no data has been given yet, ask for data to be sent
+        if buf.is_empty() {
+            return Ok(None);
+        }
+
+        // Attempt to deserialize the current buffer
+        {
+            let cursor = io::Cursor::new(&buf[..]);
+            let mut de = Deserializer::new(cursor);
+            result = Value::deserialize(&mut de);
+            curpos = de.position() as usize;
+        }
+
+        // Discard read bytes
+        buf.split_to(curpos);
+
+        match result {
+            Ok(v) => {
+                let msg = T::from_value(v)
+                    .map_err(|e| FromBytesError::InvalidMessage(e))?;
+                Ok(Some(msg))
+            }
+            Err(e) => {
+                // If no more data due to eof, ask for more to be sent
+                if let decode::Error::InvalidDataRead(ref err) = e {
+                    if let io::ErrorKind::UnexpectedEof = err.kind() {
+                        return Ok(None);
+                    }
+                }
+
+                Err(e.into())
+            }
+        }
+    }
+}
+
+
+// ===========================================================================
+// Message
+// ===========================================================================
+
+
 /// The [`Message`] type is the core underlying type of all RPC messages
 ///
 /// [`Message`] wraps around the [`rmpv::Value`] type. It ensures that the
@@ -344,15 +486,17 @@ pub trait RpcMessageType
 ///
 /// [`Message`]: message/struct.Message.html
 /// [`rmpv::Value`]: https://docs.rs/rmpv/0.4.0/rmpv/enum.Value.html
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Message
 {
     msg: Value,
 }
 
 
-impl RpcMessage<ToMessageError> for Message
+impl RpcMessage for Message
 {
+    type Err = ToMessageError;
+
     fn as_vec(&self) -> &Vec<Value>
     {
         self.msg.as_array().unwrap()
@@ -423,7 +567,7 @@ impl Message
 {
     // TODO: improve call to check_int since it's possible the array's first
     // element is not an integer
-    // TODO: should this be removed?
+    // TODO: remove this
     /// Converts an [`rmpv::Value`].
     ///
     /// # Errors
