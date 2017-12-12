@@ -91,7 +91,7 @@ mod from {
 
     // Local imports
 
-    use core::{CodeConvert, Message, MessageType};
+    use core::{CodeConvert, FromMessage, Message, MessageType};
     use core::response::{ResponseCodeError, ToResponseError};
 
     // Helpers
@@ -111,13 +111,13 @@ mod from {
         let array: Vec<Value> = vec![msgtype, msgid, msgcode];
 
         let val = Value::Array(array);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // ResponseMessage::from is called with the message
-        let result = Response::from(msg);
+        // ResponseMessage::from_msg is called with the message
+        let result = Response::from_msg(msg);
 
         // --------------------
         // THEN
@@ -149,13 +149,13 @@ mod from {
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // ResponseMessage::from is called with the message
-        let result = Response::from(msg);
+        // ResponseMessage::from_msg is called with the message
+        let result = Response::from_msg(msg);
 
         // --------------------
         // THEN
@@ -197,13 +197,13 @@ mod from {
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // ResponseMessage::from is called with the message
-        let result = Response::from(msg);
+        // ResponseMessage::from_msg is called with the message
+        let result = Response::from_msg(msg);
 
         // --------------------
         // THEN
@@ -242,13 +242,13 @@ mod from {
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgid.clone(), msgcode, msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // ResponseMessage::from is called with the message
-            let result = Response::from(msg);
+            // ResponseMessage::from_msg is called with the message
+            let result = Response::from_msg(msg);
 
             // --------------------
             // THEN
@@ -291,13 +291,13 @@ mod from {
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // ResponseMessage::from is called with the message
-        let result = Response::from(msg);
+        // ResponseMessage::from_msg is called with the message
+        let result = Response::from_msg(msg);
 
         // --------------------
         // THEN
@@ -344,13 +344,13 @@ mod from {
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgid, msgcode.clone(), msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // ResponseMessage::from is called with the message
-            let result = Response::from(msg);
+            // ResponseMessage::from_msg is called with the message
+            let result = Response::from_msg(msg);
 
             // --------------------
             // THEN
@@ -403,13 +403,13 @@ mod from {
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgid, msgcode.clone(), msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // ResponseMessage::from is called with the message
-            let result = Response::from(msg);
+            // ResponseMessage::from_msg is called with the message
+            let result = Response::from_msg(msg);
 
             // --------------------
             // THEN
@@ -457,7 +457,7 @@ mod rpcmessage {
 
     // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage};
+    use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage};
 
     // Helpers
     use super::{Response, TestError};
@@ -476,9 +476,9 @@ mod rpcmessage {
         let msgval = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgid, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let res = Response::from(msg).unwrap();
+        let res = Response::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN
@@ -508,9 +508,9 @@ mod rpcmessage {
         let msgval = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgid, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let res = Response::from(msg).unwrap();
+        let res = Response::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN
@@ -537,7 +537,7 @@ mod rpcresponse {
 
     // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage};
+    use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage};
     use core::response::RpcResponse;
 
     // Helpers
@@ -557,9 +557,9 @@ mod rpcresponse {
         let msgval = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgid, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let res = Response::from(msg).unwrap();
+        let res = Response::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN
@@ -589,9 +589,9 @@ mod rpcresponse {
         let msgresult = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, errcode, msgresult]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let res = Response::from(msg).unwrap();
+        let res = Response::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN

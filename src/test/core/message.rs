@@ -16,7 +16,7 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{value_type, Message, ToMessageError};
+use core::{value_type, FromMessage, Message, ToMessageError};
 
 // Helpers
 use super::TestEnum;
@@ -33,7 +33,7 @@ fn non_array_always_err()
 {
     let v = Value::from(42);
     let errmsg = format!("expected array but got {}", value_type(&v));
-    let ret = match Message::from(v) {
+    let ret = match Message::from_msg(v) {
         Err(e @ ToMessageError::NotArray(_)) => errmsg == e.to_string(),
         _ => false,
     };
@@ -59,7 +59,8 @@ mod from
 
     // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage, ToMessageError};
+    use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage,
+               ToMessageError};
 
     quickcheck! {
         fn invalid_array_length(val: Vec<u8>) -> TestResult {
@@ -76,7 +77,7 @@ mod from
 
             // WHEN
             // creating a message using from method
-            let result = Message::from(array);
+            let result = Message::from_msg(array);
 
             // THEN
             // an appropriate error is returned
@@ -104,9 +105,9 @@ mod from
                 .map(|v| Value::from(v.clone())).collect();
 
             // WHEN
-            // creating a message via Message::from()
+            // creating a message via Message::from_msg()
             let cause_errmsg = format!("Expected value <= 2 but got value {}", code);
-            let result = Message::from(Value::from(array));
+            let result = Message::from_msg(Value::from(array));
 
             // THEN
             // MessageError::InvalidType error is returned
@@ -146,7 +147,7 @@ mod from
         let array = Value::from(valvec);
         let expected = array.clone();
 
-        let ret = match Message::from(array) {
+        let ret = match Message::from_msg(array) {
             Ok(m) => m.as_value() == &expected,
             _ => false,
         };
@@ -166,7 +167,7 @@ mod message_type
 
     // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage};
+    use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage};
 
     // Helpers
     fn mkmessage(msgtype: u8) -> Message
@@ -176,7 +177,7 @@ mod message_type
         let msgcode = Value::from(0);
         let msgargs = Value::Nil;
         let val = Value::from(vec![msgtype, msgid, msgcode, msgargs]);
-        Message::from(val).unwrap()
+        Message::from_msg(val).unwrap()
     }
 
     quickcheck! {
@@ -203,7 +204,8 @@ mod convert_bytes {
 
     // Local imports
 
-    use core::{AsBytes, FromBytes, FromBytesError, Message, RpcMessage};
+    use core::{AsBytes, FromBytes, FromBytesError, FromMessage, Message,
+               RpcMessage};
     use core::request::RequestMessage;
 
     // Helpers
@@ -227,7 +229,7 @@ mod convert_bytes {
             .map(|v| Value::from(v.clone()))
             .collect();
         let array = Value::from(valvec);
-        let msg = Message::from(array).unwrap();
+        let msg = Message::from_msg(array).unwrap();
 
         // --------------------
         // WHEN
@@ -260,7 +262,7 @@ mod convert_bytes {
             .map(|v| Value::from(v.clone()))
             .collect();
         let array = Value::from(valvec);
-        let msg = Message::from(array).unwrap();
+        let msg = Message::from_msg(array).unwrap();
         let expected = msg.clone();
         let mut msgpack = msg.as_bytes().try_mut().unwrap();
 

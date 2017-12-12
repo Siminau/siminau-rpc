@@ -64,7 +64,7 @@
 //! let msgcode = Value::from(Notify::Yep.to_number());
 //! let msgargs = Value::Array(vec![Value::from(9001)]);
 //! let msgval = Value::Array(vec![msgtype, msgcode, msgargs]);
-//! let msg = Message::from(msgval).unwrap();
+//! let msg = Message::from_value(msgval).unwrap();
 //!
 //! // Turn the message into a Notice type
 //! let nmsg = Notice::from(msg).unwrap();
@@ -96,8 +96,8 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
-           MessageType, RpcMessage, RpcMessageType, ToMessageError};
+use core::{check_int, value_type, CheckIntError, CodeConvert, FromMessage,
+           Message, MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
 
 // ===========================================================================
@@ -243,73 +243,6 @@ where
     {
         self.msg.as_value()
     }
-
-    /// Create a NotificationMessage from a Message
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The message is an array with a len != 3
-    /// 2. The message's type parameter is not MessageType::Notification
-    /// 3. The message's code parameter cannot be converted into the
-    ///    notification's expected code type
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{CodeConvert, Message, MessageType,
-    ///                            RpcMessage};
-    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
-    ///
-    /// # fn main() {
-    /// // Create an alias for NotificationMessage, re-using `MessageType` as the
-    /// // message code.
-    /// type Notice = NotificationMessage<MessageType>;
-    ///
-    /// // Build Message
-    /// let msgtype = Value::from(MessageType::Notification.to_number());
-    /// let msgcode = Value::from(MessageType::Request.to_number());
-    /// let msgargs = Value::Array(vec![Value::from(9001)]);
-    /// let msgval = Value::Array(vec![msgtype, msgcode, msgargs]);
-    /// let msg = Message::from(msgval).unwrap();
-    ///
-    /// // Turn the message into a Notice type
-    /// let req = Notice::from(msg).unwrap();
-    /// # }
-    /// ```
-    fn from_message(msg: Message) -> Result<Self, ToNoticeError>
-    {
-        // Notifications is always represented as an array of 4 values
-        {
-            // Requests is always represented as an array of 3 values
-            let array = msg.as_vec();
-            let arraylen = array.len();
-            if arraylen != 3 {
-                let err = ToNoticeError::ArrayLength(arraylen);
-                return Err(err);
-            }
-
-            // Run all check functions and return the first error generated
-            Self::check_message_type(&array[0])
-                .map_err(|e| ToNoticeError::InvalidType(e))?;
-
-            Self::check_message_code(&array[1])
-                .map_err(|e| ToNoticeError::InvalidCode(e))?;
-
-            Self::check_message_args(&array[2])
-                .map_err(|e| ToNoticeError::InvalidArgs(e))?;
-        }
-
-        Ok(Self {
-            msg: msg,
-            msgtype: PhantomData,
-        })
-    }
 }
 
 
@@ -363,7 +296,7 @@ where
         let msgargs = Value::from(args);
         let msgval = Value::from(vec![msgtype, notifycode, msgargs]);
 
-        match Message::from(msgval) {
+        match Message::from_msg(msgval) {
             Ok(msg) => Self {
                 msg: msg,
                 msgtype: PhantomData,
@@ -372,54 +305,10 @@ where
         }
     }
 
-    // TODO: Should this be removed?
-    /// Create a NotificationMessage from a Message
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The message is an array with a len != 3
-    /// 2. The message's type parameter is not MessageType::Notification
-    /// 3. The message's code parameter cannot be converted into the
-    ///    notification's expected code type
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{CodeConvert, Message, MessageType,
-    ///                            RpcMessage};
-    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
-    ///
-    /// # fn main() {
-    /// // Create an alias for NotificationMessage, re-using `MessageType` as the
-    /// // message code.
-    /// type Notice = NotificationMessage<MessageType>;
-    ///
-    /// // Build Message
-    /// let msgtype = Value::from(MessageType::Notification.to_number());
-    /// let msgcode = Value::from(MessageType::Request.to_number());
-    /// let msgargs = Value::Array(vec![Value::from(9001)]);
-    /// let msgval = Value::Array(vec![msgtype, msgcode, msgargs]);
-    /// let msg = Message::from(msgval).unwrap();
-    ///
-    /// // Turn the message into a Notice type
-    /// let req = Notice::from(msg).unwrap();
-    /// # }
-    /// ```
-    pub fn from(msg: Message) -> Result<Self, ToNoticeError>
-    {
-        Self::from_message(msg)
-    }
-
     // Checks that the message type parameter of a Notification message is
     // valid.
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_type(msgtype: &Value) -> Result<(), NoticeTypeError>
     {
         let msgtype = msgtype.as_u64().unwrap() as u8;
@@ -438,7 +327,7 @@ where
     // Checks that the message code parameter of a Notification message is
     // valid.
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_code(msgcode: &Value) -> Result<(), NoticeCodeError>
     {
         let msgcode =
@@ -464,7 +353,7 @@ where
     // Check that the message arguments parameter of a Notification message is
     // valid.
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_args(msgargs: &Value) -> Result<(), NoticeArgsError>
     {
         match msgargs.as_array() {
@@ -476,6 +365,81 @@ where
                 Err(err)
             }
         }
+    }
+}
+
+
+impl<C> FromMessage<Message> for NotificationMessage<C>
+where
+    C: CodeConvert<C>
+{
+    type Err = ToNoticeError;
+
+    /// Create a NotificationMessage from a Message
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if any of the following are true:
+    ///
+    /// 1. The message is an array with a len != 3
+    /// 2. The message's type parameter is not MessageType::Notification
+    /// 3. The message's code parameter cannot be converted into the
+    ///    notification's expected code type
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rmpv;
+    /// extern crate siminau_rpc;
+    ///
+    /// use rmpv::Value;
+    /// use siminau_rpc::core::{CodeConvert, FromMessage, Message, MessageType,
+    ///                         RpcMessage};
+    /// use siminau_rpc::core::notify::{NotificationMessage, RpcNotice};
+    ///
+    /// # fn main() {
+    /// // Create an alias for NotificationMessage, re-using `MessageType` as the
+    /// // message code.
+    /// type Notice = NotificationMessage<MessageType>;
+    ///
+    /// // Build Message
+    /// let msgtype = Value::from(MessageType::Notification.to_number());
+    /// let msgcode = Value::from(MessageType::Request.to_number());
+    /// let msgargs = Value::Array(vec![Value::from(9001)]);
+    /// let msgval = Value::Array(vec![msgtype, msgcode, msgargs]);
+    /// let msg = Message::from_msg(msgval).unwrap();
+    ///
+    /// // Turn the message into a Notice type
+    /// let req = Notice::from_msg(msg).unwrap();
+    /// # }
+    /// ```
+    fn from_msg(msg: Message) -> Result<Self, Self::Err>
+    {
+        // Notifications is always represented as an array of 4 values
+        {
+            // Requests is always represented as an array of 3 values
+            let array = msg.as_vec();
+            let arraylen = array.len();
+            if arraylen != 3 {
+                let err = ToNoticeError::ArrayLength(arraylen);
+                return Err(err);
+            }
+
+            // Run all check functions and return the first error generated
+            Self::check_message_type(&array[0])
+                .map_err(|e| ToNoticeError::InvalidType(e))?;
+
+            Self::check_message_code(&array[1])
+                .map_err(|e| ToNoticeError::InvalidCode(e))?;
+
+            Self::check_message_args(&array[2])
+                .map_err(|e| ToNoticeError::InvalidArgs(e))?;
+        }
+
+        Ok(Self {
+            msg: msg,
+            msgtype: PhantomData,
+        })
     }
 }
 

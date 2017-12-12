@@ -23,7 +23,10 @@
 //!
 //! And the traits provided are:
 //!
+//! * AsBytes
 //! * CodeConvert
+//! * FromBytes
+//! * FromMessage
 //! * RpcMessage
 //! * RpcMessageType
 //!
@@ -43,6 +46,19 @@
 //! ## Message
 //!
 //! The core base type of all RPC messages.
+//!
+//! ## AsBytes
+//!
+//! This trait provides an interface to convert a message into msgpack bytes.
+//!
+//! ## FromBytes
+//!
+//! This trait provides an interface to convert a msgpack bytes into a message.
+//!
+//! ## FromMessage
+//!
+//! This trait provides an interface to convert messages into a specific rpc
+//! message.
 //!
 //! ## CodeConvert
 //!
@@ -69,7 +85,7 @@
 //! [`Message`]: struct.Message.html
 //! [`rmpv::Value`]: https://docs.rs/rmpv/0.4.0/rmpv/enum.Value.html
 //! [`MessageType`]: enum.MessageType.html
-//! [`rmp-serde`]: https://docs.rs/rmp-serde/0.13.3/rmp_serde
+//! [`rmp-serde`]: https://docs.rs/rmp-serde
 //! [`msgpack-rpc`]: https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md
 //!
 //! # Example
@@ -80,7 +96,8 @@
 //! extern crate siminau_rpc;
 //!
 //! use rmpv::Value;
-//! use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
+//! use siminau_rpc::core::{CodeConvert, FromMessage, Message, MessageType,
+//!                         RpcMessage};
 //!
 //! # fn main() {
 //! // Build expected value
@@ -94,11 +111,11 @@
 //! let buf: Vec<u8> = vec![148, 0, 42, 0, 145, 42];
 //!
 //! // Deserializing it will give the expected value
-//! let val = rmps::from_slice(&buf[..]).unwrap();
+//! let val: Value = rmps::from_slice(&buf[..]).unwrap();
 //! assert_eq!(val, expected);
 //!
 //! // Turn the value into a Message type
-//! let msg = Message::from(val).unwrap();
+//! let msg = Message::from_msg(val).unwrap();
 //!
 //! // Grab a reference to the internal value and check against expected
 //! assert_eq!(msg.as_value(), &expected);
@@ -190,9 +207,11 @@ pub enum CheckIntError
 ///
 /// # Errors
 ///
-/// If the value is either None or a value that cannot fit into the type
-/// specified by `expected`, then the RpcErrorKind::TypeError error
-/// is returned.
+/// If the value is None, then the CheckIntError::MissingValue error is
+/// returned.
+///
+/// If the value cannot fit into the type specified by `expected`, then the
+/// CheckIntError::ValueTooBig error is returned.
 pub fn check_int(
     val: Option<u64>, max_value: u64, expected: String
 ) -> Result<u64, CheckIntError>
@@ -288,6 +307,35 @@ pub enum MessageType
 // ===========================================================================
 
 
+pub trait FromMessage<M>
+{
+    type Err: Fail + From<ToMessageError>;
+
+    /// Create a new message from a Message object
+    fn from_msg(M) -> Result<Self, Self::Err>
+    where
+        Self: Sized;
+}
+
+
+// Default implementation of FromMessage<Value> for specific message types
+impl<M> FromMessage<Value> for M
+    where M: RpcMessage + RpcMessageType + FromMessage<Message>
+{
+    type Err = <M as FromMessage<Message>>::Err;
+
+    /// Create a new message from a [`rmpv::Value`] object
+    fn from_msg(v: Value) -> Result<Self, Self::Err>
+    where
+        Self: Sized,
+    {
+        let msg = Message::from_msg(v).map_err(|e| Self::Err::from(e))?;
+
+        Self::from_msg(msg)
+    }
+}
+
+
 /// Define methods common to all RPC messages
 pub trait RpcMessage
 {
@@ -299,21 +347,6 @@ pub trait RpcMessage
     /// Return a reference to the internally owned [`rmpv::Value`] object.
     fn as_value(&self) -> &Value;
 
-    /// Create a new message from a Message object
-    fn from_message(Message) -> Result<Self, Self::Err>
-    where
-        Self: Sized;
-
-    /// Create a new message from a [`rmpv::Value`] object
-    fn from_value(v: Value) -> Result<Self, Self::Err>
-    where
-        Self: Sized,
-    {
-        let msg = Message::from_value(v).map_err(|e| Self::Err::from(e))?;
-
-        Self::from_message(msg)
-    }
-
     /// Return the message's type.
     fn message_type(&self) -> MessageType
     {
@@ -324,11 +357,6 @@ pub trait RpcMessage
         MessageType::from_number(msgtype)
             .expect(&format!("bad msgtype? {}", msgtype))
     }
-
-    // /// Return the string name of an [`rmpv::Value`] object.
-    // fn value_type_name(arg: &Value) -> String {
-    //     value_type(arg)
-    // }
 }
 
 
@@ -430,7 +458,7 @@ pub trait FromBytes<T, E>
 
 
 impl<T, E> FromBytes<T, E> for T
-    where T: RpcMessage<Err = E>,
+    where T: RpcMessage<Err = E> + FromMessage<Value, Err = E>,
           E: Fail + From<ToMessageError>,
 {
     fn from_bytes(buf: &mut BytesMut) -> Result<Option<T>, FromBytesError<E>> {
@@ -455,7 +483,7 @@ impl<T, E> FromBytes<T, E> for T
 
         match result {
             Ok(v) => {
-                let msg = T::from_value(v)
+                let msg = T::from_msg(v)
                     .map_err(|e| FromBytesError::InvalidMessage(e))?;
                 Ok(Some(msg))
             }
@@ -479,6 +507,20 @@ impl<T, E> FromBytes<T, E> for T
 // ===========================================================================
 
 
+// Message errors
+#[derive(Debug, Fail)]
+pub enum ToMessageError
+{
+    #[fail(display = "expected array length of either 3 or 4, got {}", _0)]
+    ArrayLength(usize),
+
+    #[fail(display = "Invalid message type")]
+    InvalidType(#[cause] CheckIntError),
+
+    #[fail(display = "expected array but got {}", _0)] NotArray(String),
+}
+
+
 /// The [`Message`] type is the core underlying type of all RPC messages
 ///
 /// [`Message`] wraps around the [`rmpv::Value`] type. It ensures that the
@@ -493,19 +535,8 @@ pub struct Message
 }
 
 
-impl RpcMessage for Message
-{
+impl FromMessage<Value> for Message {
     type Err = ToMessageError;
-
-    fn as_vec(&self) -> &Vec<Value>
-    {
-        self.msg.as_array().unwrap()
-    }
-
-    fn as_value(&self) -> &Value
-    {
-        &self.msg
-    }
 
     // TODO: improve call to check_int since it's possible the array's first
     // element is not an integer
@@ -520,7 +551,7 @@ impl RpcMessage for Message
     /// 3. The array's first item is not a u8
     /// 4. The array's first item is a value greater than the maximum value
     ///    stored in the MessageType enum
-    fn from_value(val: Value) -> Result<Self, ToMessageError>
+    fn from_msg(val: Value) -> Result<Self, Self::Err>
     {
         if let Some(array) = val.as_array() {
             let arraylen = array.len();
@@ -542,46 +573,32 @@ impl RpcMessage for Message
         Ok(Self { msg: val })
     }
 
-    fn from_message(msg: Message) -> Result<Self, ToMessageError>
+}
+
+
+impl FromMessage<Message> for Message {
+    type Err = ToMessageError;
+
+    fn from_msg(msg: Message) -> Result<Self, Self::Err>
     {
-        Self::from_value(msg.into())
+        let ret = Message { msg: msg.msg };
+        Ok(ret)
     }
 }
 
 
-// Message errors
-#[derive(Debug, Fail)]
-pub enum ToMessageError
+impl RpcMessage for Message
 {
-    #[fail(display = "expected array length of either 3 or 4, got {}", _0)]
-    ArrayLength(usize),
+    type Err = ToMessageError;
 
-    #[fail(display = "Invalid message type")]
-    InvalidType(#[cause] CheckIntError),
-
-    #[fail(display = "expected array but got {}", _0)] NotArray(String),
-}
-
-
-impl Message
-{
-    // TODO: improve call to check_int since it's possible the array's first
-    // element is not an integer
-    // TODO: remove this
-    /// Converts an [`rmpv::Value`].
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The value is not an array
-    /// 2. The length of the array is less than 3 or greater than 4
-    /// 3. The array's first item is not a u8
-    /// 4. The array's first item is a value greater than the maximum value
-    ///    stored in the MessageType enum
-    pub fn from(val: Value) -> Result<Self, ToMessageError>
+    fn as_vec(&self) -> &Vec<Value>
     {
-        Self::from_value(val)
+        self.msg.as_array().unwrap()
+    }
+
+    fn as_value(&self) -> &Value
+    {
+        &self.msg
     }
 }
 

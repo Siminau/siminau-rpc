@@ -45,8 +45,8 @@
 //!
 //! // Message and response types
 //! // Note: CodeValueError is needed for CodeConvert custom derive
-//! use siminau_rpc::core::{CodeConvert, CodeValueError, Message, MessageType,
-//!                         RpcMessage};
+//! use siminau_rpc::core::{CodeConvert, CodeValueError, FromMessage, Message,
+//!                         MessageType, RpcMessage};
 //! use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
 //!
 //! // Define Error codes
@@ -66,10 +66,10 @@
 //! let msgcode = Value::from(RequestError::Nope.to_number());
 //! let msgresult = Value::from(9001);
 //! let msgval = Value::Array(vec![msgtype, msgid, msgcode, msgresult]);
-//! let msg = Message::from(msgval).unwrap();
+//! let msg = Message::from_msg(msgval).unwrap();
 //!
 //! // Turn the message into a Response type
-//! let res = Response::from(msg).unwrap();
+//! let res = Response::from_msg(msg).unwrap();
 //! assert_eq!(res.message_type(), MessageType::Response);
 //! assert_eq!(res.message_id(), 42);
 //! assert_eq!(res.error_code(), RequestError::Nope);
@@ -100,8 +100,8 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{check_int, CheckIntError, CodeConvert, Message, MessageType,
-           RpcMessage, RpcMessageType, ToMessageError};
+use core::{check_int, CheckIntError, CodeConvert, FromMessage, Message,
+           MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
 
 // ===========================================================================
@@ -252,75 +252,6 @@ where
     {
         self.msg.as_value()
     }
-
-    // TODO: should this be removed?
-    /// Create a ResponseMessage from a Message
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The message is an array with a len != 4
-    /// 2. The message's type parameter is not MessageType::Response
-    /// 3. The message's id parameter is not a u32
-    /// 4. The message's error parameter cannot be converted into the request's
-    ///    expected error code type
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
-    /// use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
-    ///
-    /// # fn main() {
-    /// // Create an alias for ResponseMessage, re-using `MessageType` as the
-    /// // message code.
-    /// type Response = ResponseMessage<MessageType>;
-    ///
-    /// // Build Message
-    /// let msgtype = Value::from(MessageType::Response.to_number());
-    /// let msgid = Value::from(42);
-    /// let msgcode = Value::from(MessageType::Notification.to_number());
-    /// let msgresult = Value::from(9001);
-    /// let msgval = Value::Array(vec![msgtype, msgid, msgcode, msgresult]);
-    /// let msg = Message::from(msgval).unwrap();
-    ///
-    /// // Turn the message into a Response type
-    /// let res = Response::from(msg).unwrap();
-    /// # }
-    /// ```
-    fn from_message(msg: Message) -> Result<Self, ToResponseError>
-    {
-        // Response is always represented as an array of 4 values
-        {
-            // Response is always represented as an array of 4 values
-            let array = msg.as_vec();
-            let arraylen = array.len();
-            if arraylen != 4 {
-                return Err(ToResponseError::ArrayLength(arraylen));
-            }
-
-            // Run all check functions and return the first error generated
-            Self::check_message_type(&array[0])
-                .map_err(|e| ToResponseError::InvalidType(e))?;
-
-            Self::check_message_id(&array[1]).map_err(|e| {
-                let ResponseIDError { err } = e;
-                ToResponseError::InvalidID(err)
-            })?;
-
-            Self::check_error_code(&array[2])
-                .map_err(|e| ToResponseError::InvalidCode(e))?;
-        }
-        Ok(Self {
-            msg: msg,
-            msgtype: PhantomData,
-        })
-    }
 }
 
 
@@ -374,7 +305,7 @@ where
         let errcode = Value::from(errcode.to_u64());
         let msgval = Value::from(vec![msgtype, msgid, errcode, result]);
 
-        match Message::from(msgval) {
+        match Message::from_msg(msgval) {
             Ok(msg) => Self {
                 msg: msg,
                 msgtype: PhantomData,
@@ -383,53 +314,9 @@ where
         }
     }
 
-    /// Create a ResponseMessage from a Message
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The message is an array with a len != 4
-    /// 2. The message's type parameter is not MessageType::Response
-    /// 3. The message's id parameter is not a u32
-    /// 4. The message's error parameter cannot be converted into the request's
-    ///    expected error code type
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
-    /// use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
-    ///
-    /// # fn main() {
-    /// // Create an alias for ResponseMessage, re-using `MessageType` as the
-    /// // message code.
-    /// type Response = ResponseMessage<MessageType>;
-    ///
-    /// // Build Message
-    /// let msgtype = Value::from(MessageType::Response.to_number());
-    /// let msgid = Value::from(42);
-    /// let msgcode = Value::from(MessageType::Notification.to_number());
-    /// let msgresult = Value::from(9001);
-    /// let msgval = Value::Array(vec![msgtype, msgid, msgcode, msgresult]);
-    /// let msg = Message::from(msgval).unwrap();
-    ///
-    /// // Turn the message into a Response type
-    /// let res = Response::from(msg).unwrap();
-    /// # }
-    /// ```
-    pub fn from(msg: Message) -> Result<Self, ToResponseError>
-    {
-        Self::from_message(msg)
-    }
-
     // Checks that the message type parameter of a Response message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_type(msgtype: &Value) -> Result<(), ResponseTypeError>
     {
         let msgtype = msgtype.as_u64().unwrap() as u8;
@@ -446,7 +333,7 @@ where
 
     // Checks that the message id parameter of a Response message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_id(msgid: &Value) -> Result<(), ResponseIDError>
     {
         check_int(msgid.as_u64(), u32::max_value() as u64, "u32".to_string())
@@ -456,7 +343,7 @@ where
 
     // Checks that the error code parameter of a Response message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_error_code(errcode: &Value) -> Result<(), ResponseCodeError>
     {
         let errcode =
@@ -477,6 +364,84 @@ where
         C::from_number(val)
             .map_err(|_| ResponseCodeError::ToCode(errcode_u64))?;
         Ok(())
+    }
+}
+
+
+impl<C> FromMessage<Message> for ResponseMessage<C>
+where
+    C: CodeConvert<C>
+{
+    type Err = ToResponseError;
+
+    // TODO: should this be removed?
+    /// Create a ResponseMessage from a Message
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if any of the following are true:
+    ///
+    /// 1. The message is an array with a len != 4
+    /// 2. The message's type parameter is not MessageType::Response
+    /// 3. The message's id parameter is not a u32
+    /// 4. The message's error parameter cannot be converted into the request's
+    ///    expected error code type
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// extern crate rmpv;
+    /// extern crate siminau_rpc;
+    ///
+    /// use rmpv::Value;
+    /// use siminau_rpc::core::{CodeConvert, FromMessage, Message, MessageType,
+    ///                         RpcMessage};
+    /// use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
+    ///
+    /// # fn main() {
+    /// // Create an alias for ResponseMessage, re-using `MessageType` as the
+    /// // message code.
+    /// type Response = ResponseMessage<MessageType>;
+    ///
+    /// // Build Message
+    /// let msgtype = Value::from(MessageType::Response.to_number());
+    /// let msgid = Value::from(42);
+    /// let msgcode = Value::from(MessageType::Notification.to_number());
+    /// let msgresult = Value::from(9001);
+    /// let msgval = Value::Array(vec![msgtype, msgid, msgcode, msgresult]);
+    /// let msg = Message::from_msg(msgval).unwrap();
+    ///
+    /// // Turn the message into a Response type
+    /// let res = Response::from_msg(msg).unwrap();
+    /// # }
+    /// ```
+    fn from_msg(msg: Message) -> Result<Self, Self::Err>
+    {
+        // Response is always represented as an array of 4 values
+        {
+            // Response is always represented as an array of 4 values
+            let array = msg.as_vec();
+            let arraylen = array.len();
+            if arraylen != 4 {
+                return Err(ToResponseError::ArrayLength(arraylen));
+            }
+
+            // Run all check functions and return the first error generated
+            Self::check_message_type(&array[0])
+                .map_err(|e| ToResponseError::InvalidType(e))?;
+
+            Self::check_message_id(&array[1]).map_err(|e| {
+                let ResponseIDError { err } = e;
+                ToResponseError::InvalidID(err)
+            })?;
+
+            Self::check_error_code(&array[2])
+                .map_err(|e| ToResponseError::InvalidCode(e))?;
+        }
+        Ok(Self {
+            msg: msg,
+            msgtype: PhantomData,
+        })
     }
 }
 

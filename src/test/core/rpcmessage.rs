@@ -16,7 +16,7 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{CodeConvert, Message, MessageType, RpcMessage};
+use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage};
 use core::request::RequestMessage;
 
 // Helpers
@@ -43,9 +43,9 @@ fn as_vec()
     let msgval = Value::Array(vec![Value::from(42)]);
 
     let val = Value::Array(vec![msgtype, msgid, msgmeth, msgval]);
-    let msg = Message::from(val).unwrap();
+    let msg = Message::from_msg(val).unwrap();
     let expected = msg.clone();
-    let req: RequestMessage<TestEnum> = RequestMessage::from(msg).unwrap();
+    let req: RequestMessage<TestEnum> = RequestMessage::from_msg(msg).unwrap();
 
     // --------------------
     // WHEN
@@ -77,9 +77,9 @@ fn as_value()
     let msgval = Value::Array(vec![Value::from(42)]);
 
     let val = Value::Array(vec![msgtype, msgid, msgmeth, msgval]);
-    let msg = Message::from(val).unwrap();
+    let msg = Message::from_msg(val).unwrap();
     let expected = msg.clone();
-    let req: RequestMessage<TestEnum> = RequestMessage::from(msg).unwrap();
+    let req: RequestMessage<TestEnum> = RequestMessage::from_msg(msg).unwrap();
 
     // --------------------
     // WHEN

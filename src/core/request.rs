@@ -49,8 +49,8 @@
 //! // Message and request types
 //! // Note: CodeValueError must be in scope for the CodeConvert custom derive
 //! // to work
-//! use siminau_rpc::core::{CodeConvert, CodeValueError, Message, MessageType,
-//!                         RpcMessage};
+//! use siminau_rpc::core::{CodeConvert, CodeValueError, FromMessage, Message,
+//!                         MessageType, RpcMessage};
 //! use siminau_rpc::core::request::{RequestMessage, RpcRequest};
 //!
 //! // Define Request methods
@@ -70,10 +70,10 @@
 //! let msgmeth = Value::from(Func::Question.to_number());
 //! let msgargs = Value::Array(vec![Value::from(42)]);
 //! let msgval = Value::Array(vec![msgtype, msgid, msgmeth, msgargs]);
-//! let msg = Message::from(msgval).unwrap();
+//! let msg = Message::from_msg(msgval).unwrap();
 //!
 //! // Turn the message into a Request type
-//! let req = Request::from(msg).unwrap();
+//! let req = Request::from_msg(msg).unwrap();
 //! assert_eq!(req.message_type(), MessageType::Request);
 //! assert_eq!(req.message_id(), 42);
 //! assert_eq!(req.message_method(), Func::Question);
@@ -104,8 +104,8 @@ use rmpv::Value;
 
 // Local imports
 
-use core::{check_int, value_type, CheckIntError, CodeConvert, Message,
-           MessageType, RpcMessage, RpcMessageType, ToMessageError};
+use core::{check_int, value_type, CheckIntError, CodeConvert, FromMessage,
+           Message, MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
 
 // ===========================================================================
@@ -270,79 +270,6 @@ where
     {
         self.msg.as_value()
     }
-
-    /// Create a RequestMessage from a Message
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The message is an array with a len != 4
-    /// 2. The message's type parameter cannot be converted into a
-    ///    MessageType variant
-    /// 3. The message's id parameter is not a u32
-    /// 4. The message's method parameter cannot be converted into the request's
-    ///    expected method type
-    /// 5. The message's arguments parameter is not an array
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
-    /// use siminau_rpc::core::request::{RequestMessage, RpcRequest};
-    ///
-    /// # fn main() {
-    /// // Create an alias for RequestMessage, re-using `MessageType` as the
-    /// // message code.
-    /// type Request = RequestMessage<MessageType>;
-    ///
-    /// // Build Message
-    /// let msgtype = Value::from(MessageType::Request.to_number());
-    /// let msgid = Value::from(42);
-    /// let msgmeth = Value::from(MessageType::Notification.to_number());
-    /// let msgargs = Value::Array(vec![Value::from(9001)]);
-    /// let msgval = Value::Array(vec![msgtype, msgid, msgmeth, msgargs]);
-    /// let msg = Message::from(msgval).unwrap();
-    ///
-    /// // Turn the message into a Request type
-    /// let req = Request::from(msg).unwrap();
-    /// # }
-    /// ```
-    fn from_message(msg: Message) -> Result<Self, ToRequestError>
-    {
-        {
-            // Requests is always represented as an array of 4 values
-            let array = msg.as_vec();
-            let arraylen = array.len();
-            if arraylen != 4 {
-                let err = ToRequestError::ArrayLength(arraylen);
-                return Err(err);
-            }
-
-            // Run all check functions and return the first error generated
-            Self::check_message_type(&array[0])
-                .map_err(|e| ToRequestError::InvalidType(e))?;
-
-            Self::check_message_id(&array[1]).map_err(|e| {
-                let RequestIDError { err } = e;
-                ToRequestError::InvalidID(err)
-            })?;
-
-            Self::check_message_method(&array[2])
-                .map_err(|e| ToRequestError::InvalidCode(e))?;
-
-            Self::check_message_args(&array[3])
-                .map_err(|e| ToRequestError::InvalidArgs(e))?;
-        }
-        Ok(Self {
-            msg: msg,
-            codetype: PhantomData,
-        })
-    }
 }
 
 
@@ -397,7 +324,7 @@ where
         let msgargs = Value::from(args);
         let msgval = Value::from(vec![msgtype, msgid, msgmeth, msgargs]);
 
-        match Message::from(msgval) {
+        match Message::from_msg(msgval) {
             Ok(msg) => Self {
                 msg: msg,
                 codetype: PhantomData,
@@ -406,56 +333,9 @@ where
         }
     }
 
-    // TODO: should this be removed?
-    /// Create a RequestMessage from a Message
-    ///
-    /// # Errors
-    ///
-    /// An error is returned if any of the following are true:
-    ///
-    /// 1. The message is an array with a len != 4
-    /// 2. The message's type parameter cannot be converted into a
-    ///    MessageType variant
-    /// 3. The message's id parameter is not a u32
-    /// 4. The message's method parameter cannot be converted into the request's
-    ///    expected method type
-    /// 5. The message's arguments parameter is not an array
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// extern crate rmpv;
-    /// extern crate siminau_rpc;
-    ///
-    /// use rmpv::Value;
-    /// use siminau_rpc::core::{CodeConvert, Message, MessageType, RpcMessage};
-    /// use siminau_rpc::core::request::{RequestMessage, RpcRequest};
-    ///
-    /// # fn main() {
-    /// // Create an alias for RequestMessage, re-using `MessageType` as the
-    /// // message code.
-    /// type Request = RequestMessage<MessageType>;
-    ///
-    /// // Build Message
-    /// let msgtype = Value::from(MessageType::Request.to_number());
-    /// let msgid = Value::from(42);
-    /// let msgmeth = Value::from(MessageType::Notification.to_number());
-    /// let msgargs = Value::Array(vec![Value::from(9001)]);
-    /// let msgval = Value::Array(vec![msgtype, msgid, msgmeth, msgargs]);
-    /// let msg = Message::from(msgval).unwrap();
-    ///
-    /// // Turn the message into a Request type
-    /// let req = Request::from(msg).unwrap();
-    /// # }
-    /// ```
-    pub fn from(msg: Message) -> Result<Self, ToRequestError>
-    {
-        Self::from_message(msg)
-    }
-
     // Checks that the message type parameter of a Request message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_type(msgtype: &Value) -> Result<(), RequestTypeError>
     {
         let msgtype = msgtype.as_u64().unwrap() as u8;
@@ -473,7 +353,7 @@ where
 
     // Checks that the message id parameter of a Request message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_id(msgid: &Value) -> Result<(), RequestIDError>
     {
         check_int(msgid.as_u64(), u32::max_value() as u64, "u32".to_string())
@@ -483,7 +363,7 @@ where
 
     // Checks that the message method parameter of a Request message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_method(msgmeth: &Value) -> Result<(), RequestCodeError>
     {
         let msgmeth =
@@ -508,7 +388,7 @@ where
 
     // Check that the message arguments parameter of a Request message is valid
     //
-    // This is a private method used by the public from() method
+    // This is a private method used by the public from_msg() method
     fn check_message_args(msgargs: &Value) -> Result<(), RequestArgsError>
     {
         match msgargs.as_array() {
@@ -520,6 +400,88 @@ where
                 Err(err)
             }
         }
+    }
+}
+
+
+/// Create a RequestMessage from a Message
+///
+/// # Errors
+///
+/// An error is returned if any of the following are true:
+///
+/// 1. The message is an array with a len != 4
+/// 2. The message's type parameter cannot be converted into a
+///    MessageType variant
+/// 3. The message's id parameter is not a u32
+/// 4. The message's method parameter cannot be converted into the request's
+///    expected method type
+/// 5. The message's arguments parameter is not an array
+///
+/// # Example
+///
+/// ```rust
+/// extern crate rmpv;
+/// extern crate siminau_rpc;
+///
+/// use rmpv::Value;
+/// use siminau_rpc::core::{CodeConvert, FromMessage, Message, MessageType,
+///                         RpcMessage};
+/// use siminau_rpc::core::request::{RequestMessage, RpcRequest};
+///
+/// # fn main() {
+/// // Create an alias for RequestMessage, re-using `MessageType` as the
+/// // message code.
+/// type Request = RequestMessage<MessageType>;
+///
+/// // Build Message
+/// let msgtype = Value::from(MessageType::Request.to_number());
+/// let msgid = Value::from(42);
+/// let msgmeth = Value::from(MessageType::Notification.to_number());
+/// let msgargs = Value::Array(vec![Value::from(9001)]);
+/// let msgval = Value::Array(vec![msgtype, msgid, msgmeth, msgargs]);
+/// let msg = Message::from_msg(msgval).unwrap();
+///
+/// // Turn the message into a Request type
+/// let req = Request::from_msg(msg).unwrap();
+/// # }
+/// ```
+impl<C> FromMessage<Message> for RequestMessage<C>
+where
+    C: CodeConvert<C>
+{
+    type Err = ToRequestError;
+
+    fn from_msg(msg: Message) -> Result<Self, Self::Err>
+    {
+        {
+            // Requests is always represented as an array of 4 values
+            let array = msg.as_vec();
+            let arraylen = array.len();
+            if arraylen != 4 {
+                let err = ToRequestError::ArrayLength(arraylen);
+                return Err(err);
+            }
+
+            // Run all check functions and return the first error generated
+            Self::check_message_type(&array[0])
+                .map_err(|e| ToRequestError::InvalidType(e))?;
+
+            Self::check_message_id(&array[1]).map_err(|e| {
+                let RequestIDError { err } = e;
+                ToRequestError::InvalidID(err)
+            })?;
+
+            Self::check_message_method(&array[2])
+                .map_err(|e| ToRequestError::InvalidCode(e))?;
+
+            Self::check_message_args(&array[3])
+                .map_err(|e| ToRequestError::InvalidArgs(e))?;
+        }
+        Ok(Self {
+            msg: msg,
+            codetype: PhantomData,
+        })
     }
 }
 

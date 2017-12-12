@@ -84,7 +84,8 @@ mod from
 
     // Local imports
 
-    use core::{value_type, CheckIntError, CodeConvert, Message, MessageType};
+    use core::{value_type, CheckIntError, CodeConvert, FromMessage, Message,
+               MessageType};
     use core::request::{RequestCodeError, RequestMessage, ToRequestError};
 
     // Helpers
@@ -105,14 +106,14 @@ mod from
         let array: Vec<Value> = vec![msgtype, msgid, msgmeth];
 
         let val = Value::Array(array);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // RequestMessage::from is called with the message
+        // RequestMessage::from_msg is called with the message
         let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-        result = RequestMessage::from(msg);
+        result = RequestMessage::from_msg(msg);
 
         // --------------------
         // THEN
@@ -142,14 +143,14 @@ mod from
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgmeth, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // RequestMessage::from is called with the message
+        // RequestMessage::from_msg is called with the message
         let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-        result = RequestMessage::from(msg);
+        result = RequestMessage::from_msg(msg);
 
         // --------------------
         // THEN
@@ -190,14 +191,14 @@ mod from
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgmeth, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // RequestMessage::from is called with the message
+        // RequestMessage::from_msg is called with the message
         let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-        result = RequestMessage::from(msg);
+        result = RequestMessage::from_msg(msg);
 
         // --------------------
         // THEN
@@ -249,14 +250,14 @@ mod from
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, reqid, msgmeth, msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // RequestMessage::from is called with the message
+            // RequestMessage::from_msg is called with the message
             let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-            result = RequestMessage::from(msg);
+            result = RequestMessage::from_msg(msg);
 
             // --------------------
             // THEN
@@ -294,14 +295,14 @@ mod from
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgmeth, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // RequestMessage::from is called with the message
+        // RequestMessage::from_msg is called with the message
         let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-        result = RequestMessage::from(msg);
+        result = RequestMessage::from_msg(msg);
 
         // --------------------
         // THEN
@@ -345,14 +346,14 @@ mod from
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgid, msgmeth.clone(), msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // RequestMessage::from is called with the message
+            // RequestMessage::from_msg is called with the message
             let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-            result = RequestMessage::from(msg);
+            result = RequestMessage::from_msg(msg);
 
             // --------------------
             // THEN
@@ -410,14 +411,14 @@ mod from
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgid, msgmeth.clone(), msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // RequestMessage::from is called with the message
+            // RequestMessage::from_msg is called with the message
             let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-            result = RequestMessage::from(msg);
+            result = RequestMessage::from_msg(msg);
 
             // --------------------
             // THEN
@@ -473,14 +474,14 @@ mod from
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgid, msgmeth, msgval.clone()]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // RequestMessage::from is called with the message
+        // RequestMessage::from_msg is called with the message
         let result: Result<RequestMessage<TestEnum>, ToRequestError>;
-        result = RequestMessage::from(msg);
+        result = RequestMessage::from_msg(msg);
 
         // --------------------
         // THEN

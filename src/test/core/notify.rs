@@ -91,7 +91,7 @@ mod from {
 
     // // Local imports
 
-    use core::{value_type, CodeConvert, Message, MessageType};
+    use core::{value_type, CodeConvert, FromMessage, Message, MessageType};
     use core::notify::{NoticeCodeError, ToNoticeError};
 
     // Helpers
@@ -112,13 +112,13 @@ mod from {
         let array: Vec<Value> = vec![msgtype, msgcode, arg2, arg3];
 
         let val = Value::Array(array);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // NotificationMessage::from is called with the message
-        let result = Notice::from(msg);
+        // NotificationMessage::from_msg is called with the message
+        let result = Notice::from_msg(msg);
 
         // --------------------
         // THEN
@@ -147,13 +147,13 @@ mod from {
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // NotificationMessage::from is called with the message
-        let result = Notice::from(msg);
+        // NotificationMessage::from_msg is called with the message
+        let result = Notice::from_msg(msg);
 
         // --------------------
         // THEN
@@ -192,13 +192,13 @@ mod from {
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // NotificationMessage::from is called with the message
-        let result = Notice::from(msg);
+        // NotificationMessage::from_msg is called with the message
+        let result = Notice::from_msg(msg);
 
         // --------------------
         // THEN
@@ -252,13 +252,13 @@ mod from {
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgcode.clone(), msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // NotificationMessage::from is called with the message
-            let result = Notice::from(msg);
+            // NotificationMessage::from_msg is called with the message
+            let result = Notice::from_msg(msg);
 
             // --------------------
             // THEN
@@ -314,13 +314,13 @@ mod from {
             let msgval = Value::from(42);
 
             let val = Value::Array(vec![msgtype, msgcode.clone(), msgval]);
-            let msg = Message::from(val).unwrap();
+            let msg = Message::from_msg(val).unwrap();
 
             // --------------------
             // WHEN
             // --------------------
-            // NotificationMessage::from is called with the message
-            let result = Notice::from(msg);
+            // NotificationMessage::from_msg is called with the message
+            let result = Notice::from_msg(msg);
 
             // --------------------
             // THEN
@@ -374,13 +374,13 @@ mod from {
         let msgval = Value::from(42);
 
         let val = Value::Array(vec![msgtype, msgcode, msgval.clone()]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
 
         // --------------------
         // WHEN
         // --------------------
-        // NotificationMessage::from is called with the message
-        let result = Notice::from(msg);
+        // NotificationMessage::from_msg is called with the message
+        let result = Notice::from_msg(msg);
 
         // --------------------
         // THEN
@@ -419,7 +419,7 @@ mod rpcmessage {
 
     // // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage};
+    use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage};
 
     // Helpers
     use super::{Notice, TestCode};
@@ -437,9 +437,9 @@ mod rpcmessage {
         let msgval = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let notice = Notice::from(msg).unwrap();
+        let notice = Notice::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN
@@ -468,9 +468,9 @@ mod rpcmessage {
         let msgval = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let notice = Notice::from(msg).unwrap();
+        let notice = Notice::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN
@@ -498,7 +498,7 @@ mod rpcnotice {
 
     // // Local imports
 
-    use core::{CodeConvert, Message, MessageType, RpcMessage};
+    use core::{CodeConvert, FromMessage, Message, MessageType, RpcMessage};
     use core::notify::RpcNotice;
 
     // Helpers
@@ -517,9 +517,9 @@ mod rpcnotice {
         let msgval = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgcode, msgval]);
-        let msg = Message::from(val).unwrap();
+        let msg = Message::from_msg(val).unwrap();
         let expected = msg.clone();
-        let notice = Notice::from(msg).unwrap();
+        let notice = Notice::from_msg(msg).unwrap();
 
         // --------------------
         // WHEN
@@ -549,8 +549,8 @@ mod rpcnotice {
         let msgargs = Value::Array(vec![Value::from(42)]);
 
         let val = Value::Array(vec![msgtype, msgcode, msgargs.clone()]);
-        let msg = Message::from(val).unwrap();
-        let notice = Notice::from(msg).unwrap();
+        let msg = Message::from_msg(val).unwrap();
+        let notice = Notice::from_msg(msg).unwrap();
 
         let expected = msgargs.as_array().unwrap();
 

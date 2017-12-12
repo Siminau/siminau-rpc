@@ -58,7 +58,7 @@ use tokio_service::{NewService, Service};
 // Local imports
 
 use siminau_rpc::codec::MsgPackCodec;
-use siminau_rpc::core::{CodeConvert, CodeValueError, Message};
+use siminau_rpc::core::{CodeConvert, CodeValueError, FromMessage, Message};
 use siminau_rpc::core::request::{RequestMessage, RpcRequest, ToRequestError};
 use siminau_rpc::core::response::{ResponseMessage, RpcResponse};
 use siminau_rpc::server::{shutdown, Server, ServerMessage};
@@ -118,7 +118,7 @@ impl Service for RpcService<ServerMessage> {
 
     fn call(&self, val: Self::Request) -> Self::Future {
         // Convert Value into a Message
-        let msg = match Message::from(val) {
+        let msg = match Message::from_msg(val) {
             // Return error response if invalid message
             Err(e) => {
                 let msgid = 0;
@@ -134,7 +134,7 @@ impl Service for RpcService<ServerMessage> {
         };
 
         // Convert Message into a Request
-        let req = match Request::from(msg) {
+        let req = match Request::from_msg(msg) {
             // Return error response if invalid request
             Err(e @ ToRequestError::InvalidID(_)) => {
                 let errcode = ErrorResponse::InvalidRequestID;
@@ -290,8 +290,8 @@ fn client() -> io::Result<String> {
     };
 
     // Turn into a Response
-    let msg = Message::from(res).unwrap();
-    let res = Response::from(msg).unwrap();
+    let msg = Message::from_msg(res).unwrap();
+    let res = Response::from_msg(msg).unwrap();
     let res_text = res.result();
 
     if res_text == &req_text {
