@@ -38,11 +38,9 @@
 //!
 //! ```rust
 //! extern crate rmpv;
-//! extern crate siminau_rpc;
 //!
-//! // This proc macro is needed in order to use the CodeConvert custom derive
-//! #[macro_use]
-//! extern crate siminau_rpc_derive;
+//! // `macro_use` needed to use CodeConvert custom derive
+//! #[macro_use] extern crate siminau_rpc;
 //!
 //! use rmpv::Value;
 //!

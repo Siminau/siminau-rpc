@@ -23,10 +23,7 @@ extern crate tokio_io;
 extern crate tokio_service;
 
 // Local externs
-extern crate siminau_rpc;
-
-#[macro_use]
-extern crate siminau_rpc_derive;
+#[macro_use] extern crate siminau_rpc;
 
 
 // ===========================================================================

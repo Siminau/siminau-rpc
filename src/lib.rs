@@ -98,6 +98,10 @@ pub use self::core::{CodeConvert, RpcMessage, RpcMessageType};
 pub use self::core::request::RpcRequest;
 // pub use self::core::response::RpcResponse;
 
+// Derive
+#[doc(hidden)]
+pub use siminau_rpc_derive::*;
+
 
 // ===========================================================================
 //
