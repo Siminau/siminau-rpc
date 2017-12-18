@@ -448,6 +448,29 @@ impl<E> From<decode::Error> for FromBytesError<E>
 }
 
 
+// TODO: should this have unit tests?
+impl<E> From<FromBytesError<E>> for io::Error
+    where E: Fail
+{
+    fn from(e: FromBytesError<E>) -> io::Error {
+        let (kind, errmsg) = match e {
+            FromBytesError::InvalidMarkerRead(ioerr) => return ioerr,
+            FromBytesError::InvalidDataRead(ioerr) => return ioerr,
+
+            err @ FromBytesError::Uncategorized(_) |
+            err @ FromBytesError::DepthLimitExceeded => {
+                (io::ErrorKind::Other, err.to_string())
+            }
+
+            err => {
+                (io::ErrorKind::InvalidData, err.to_string())
+            }
+        };
+        io::Error::new(kind, errmsg)
+    }
+}
+
+
 pub trait FromBytes<T, E>
     where
         T: RpcMessage,
