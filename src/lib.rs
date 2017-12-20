@@ -62,11 +62,9 @@ extern crate siminau_rpc_derive;
 
 // General errors
 
-pub mod codec;
 pub mod core;
 pub mod future;
 pub mod message;
-pub mod server;
 pub mod util;
 
 #[cfg(test)]
