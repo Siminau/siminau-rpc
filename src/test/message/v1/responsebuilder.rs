@@ -1060,6 +1060,174 @@ mod create {
 }
 
 
+mod read {
+    // Third party imports
+
+    use proptest::prelude::*;
+
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use core::response::RpcResponse;
+    use message::v1::{request, response, BuildResponseError, ResponseCode};
+
+    // --------------------
+    // count_datalen_nomatch
+    // --------------------
+    prop_compose! {
+        fn mk_nomatch_veclen(count: u32)
+            (size in (0..1000usize)
+                .prop_filter("Cannot use size the same as count".to_owned(),
+                             move |v| *v as u64 != count as u64)) -> usize
+        {
+            size
+        }
+    }
+
+    prop_compose! {
+        fn read_bytes_nomatch(count: u32)
+            (size in mk_nomatch_veclen(count))
+            (bytes in prop::collection::vec(prop::num::u8::ANY, size..size+1)) -> Vec<u8>
+        {
+            bytes
+        }
+    }
+
+    prop_compose! {
+        fn read_args_nomatch()
+            (count in 0..1000u32)
+            (bytes in read_bytes_nomatch(count), count in Just(count))-> (u32, Vec<u8>)
+        {
+            (count, bytes)
+        }
+    }
+
+    proptest! {
+        // Generate an error if the count arg does not match the length of bytes
+        #[test]
+        fn count_datalen_nomatch((count, ref bytes) in read_args_nomatch())
+        {
+            // --------------------
+            // GIVEN
+            // a u32 count and
+            // a Vec<u8> bytes and
+            // a response builder and
+            // the len of bytes != count
+            // --------------------
+            let req = request(42).read(42, 0, 42);
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::read() is called w/ count and
+            //    bytes
+            // --------------------
+            let result = builder.read(count, bytes);
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the msg's code is ResponseCode::Read and
+            // the msg's result is an array of 2 values and
+            // the result array's first item is equal to count and
+            // the result array's second item is equal to bytes
+            // --------------------
+
+            let val = match result {
+                Err(BuildResponseError::Read(c, n)) => {
+                    c == count && n == bytes.len() && c as u64 != n as u64
+                }
+                _ => false,
+            };
+
+            prop_assert!(val);
+        }
+    }
+
+    // --------------------
+    // count_datalen_match
+    // --------------------
+    prop_compose! {
+        fn read_bytes_match(count: u32)
+            (bytes in
+                prop::collection::vec(prop::num::u8::ANY,
+                                      count as usize..(count as usize)+1))
+            -> Vec<u8>
+        {
+            bytes
+        }
+    }
+
+    prop_compose! {
+        fn read_args_match()
+            (count in 0..1000u32)
+            (bytes in read_bytes_match(count), count in Just(count))-> (u32, Vec<u8>)
+        {
+            (count, bytes)
+        }
+    }
+
+    proptest! {
+        // Generate response message if the count arg matches the length of bytes
+        #[test]
+        fn count_datalen_match((count, ref bytes) in read_args_match())
+        {
+            // --------------------
+            // GIVEN
+            // a u32 count and
+            // a Vec<u8> bytes and
+            // a response builder and
+            // the len of bytes == count
+            // --------------------
+            let req = request(42).read(42, 0, 42);
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::read() is called w/ count and
+            //    bytes
+            // --------------------
+            let result = builder.read(count, bytes);
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the msg's code is ResponseCode::Read and
+            // the msg's result is an array of 2 values and
+            // the result array's first item is equal to count and
+            // the result array's second item is equal to bytes
+            // --------------------
+
+            let val = match result {
+                Err(_) => false,
+                Ok(msg) => {
+                    // Check basic criteria for valid message
+                    let result = msg.result().as_array().unwrap();
+                    let val = msg.message_id() == req.message_id() &&
+                        msg.error_code() == ResponseCode::Read &&
+                        result.len() == 2;
+
+                    // Get response count
+                    let resp_count = result[0].as_u64().unwrap() as u32;
+
+                    // Get response bytes
+                    let resp_bytes: Vec<u8> = result[1].as_slice().unwrap().into();
+
+                    prop_assert_eq!(resp_count as usize, resp_bytes.len());
+                    prop_assert_eq!(resp_count, count);
+                    prop_assert_eq!(&resp_bytes, bytes);
+
+                    val
+                }
+            };
+
+            prop_assert!(val);
+        }
+    }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================

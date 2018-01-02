@@ -44,6 +44,10 @@ extern crate tokio_io;
 
 #[cfg(test)]
 #[macro_use]
+extern crate proptest;
+
+#[cfg(test)]
+#[macro_use]
 extern crate quickcheck;
 
 extern crate rmp_serde as rmps;

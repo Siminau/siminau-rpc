@@ -73,6 +73,11 @@ pub enum BuildResponseError
                       id has invalid kind {}",
            _0)]
     Create(u8),
+
+    #[fail(display = "Unable to build create response message: bytes read \
+                      ({}) does not match read count ({})",
+           _0, _1)]
+    Read(u32, usize),
 }
 
 
@@ -367,6 +372,36 @@ impl<'request> ResponseBuilder<'request>
     ) -> Result<Response, BuildResponseError>
     {
         self.open_or_create(OpenOrCreate::Create, file_id, max_size)
+    }
+
+    // Read request succeeded
+    //
+    // 2 arguments:
+    // 1. Number of bytes read from the file
+    // 2. List of bytes read from the file
+    pub fn read<D>(
+        self, count: u32, data: &D
+    ) -> Result<Response, BuildResponseError>
+    where
+        D: AsRef<[u8]>,
+    {
+        let bytes = data.as_ref();
+        let numbytes = bytes.len();
+
+        // The number of bytes read must match the value of count
+        if count as u64 != numbytes as u64 {
+            let err = BuildResponseError::Read(count, numbytes);
+            return Err(err);
+        }
+
+        // Create args
+        let msgargs = vec![Value::from(count), Value::Binary(bytes.into())];
+
+        // Create message
+        let msgid = self.request.message_id();
+        let resp =
+            Response::new(msgid, ResponseCode::Read, Value::Array(msgargs));
+        Ok(resp)
     }
 
     // pub fn version(self, num: u32) -> RpcResult<Response>

@@ -35,6 +35,7 @@ features = ["with-serde"]
 # tempdir = "0.3.5"
 # chrono = "0.3"
 quickcheck = "0.5"
+proptest = "0.3"
 
 # Tokio deps
 tokio-service = "0.1"

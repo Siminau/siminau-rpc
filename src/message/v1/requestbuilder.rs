@@ -267,6 +267,23 @@ impl RequestBuilder
         let ret = Request::new(self.id, RequestCode::Create, msgargs);
         Ok(ret)
     }
+
+    // Request for a number of bytes from a file
+    //
+    // 3 arguments:
+    // 1. existing file id
+    // 2. starting offset
+    // 3. number of bytes to return
+    pub fn read(self, file_id: u32, offset: u64, count: u32) -> Request {
+        let msgargs = vec![
+            Value::from(file_id),
+            Value::from(offset),
+            Value::from(count),
+        ];
+
+        Request::new(self.id, RequestCode::Read, msgargs)
+    }
+
 }
 
 

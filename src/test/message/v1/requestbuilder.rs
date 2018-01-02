@@ -1008,6 +1008,186 @@ mod create {
 }
 
 
+mod read {
+    // Third party imports
+
+    use proptest::prelude::*;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use message::v1::{request, RequestCode};
+
+    proptest! {
+        #[test]
+        fn same_args(file_id in prop::num::u32::ANY,
+                     offset in prop::num::u64::ANY,
+                     count in prop::num::u32::ANY)
+        {
+            // --------------------
+            // GIVEN
+            // a u32 file id and
+            // a u64 offset and
+            // a 32 count and
+            // a request builder
+            // --------------------
+            let builder = request(42);
+
+            // --------------------
+            // WHEN
+            // RequestBuilder::read() is called w/ file_id, offset, and count
+            // --------------------
+            let result = builder.read(file_id, offset, count);
+
+            // --------------------
+            // THEN
+            // a request message is returned and
+            // the msg has a code of RequestCode::Read and
+            // the msg has 3 arguments and
+            // the msg's args have the same values as
+            //    file_id, offset, and count
+            // --------------------
+            prop_assert_eq!(result.message_method(), RequestCode::Read);
+
+            let args = result.message_args();
+            prop_assert_eq!(args.len(), 3);
+
+            let msg_file_id = args[0].as_u64().unwrap() as u32;
+            let msg_offset = args[1].as_u64().unwrap();
+            let msg_count = args[2].as_u64().unwrap() as u32;
+
+            prop_assert_eq!(msg_file_id, file_id);
+            prop_assert_eq!(msg_offset, offset);
+            prop_assert_eq!(msg_count, count);
+        }
+    }
+
+    // quickcheck! {
+
+    //     fn bad_filename(fileid: u32, filename: String, mode: u8) -> TestResult
+    //     {
+    //         // Ignore valid username strings
+    //         if !invalid_string(&filename[..]) {
+    //             return TestResult::discard();
+    //         }
+
+    //         // --------------------
+    //         // GIVEN
+    //         // a u32 file id and
+    //         // a filename string and
+    //         // the filename string may be an empty string and
+    //         // the filename may contain whitespace characters and
+    //         // the filename may contain control characters and
+    //         // an OpenMode object and
+    //         // a request builder
+    //         // --------------------
+    //         let open_mode = match OpenMode::from_bits(mode) {
+    //             // Discard any mode that has invalid bits set
+    //             Err(_) => return TestResult::discard(),
+
+    //             Ok(m) => m,
+    //         };
+    //         let builder = request(42);
+
+    //         // --------------------
+    //         // WHEN
+    //         // RequestBuilder::create() is called w/ fileid, filename, and mode
+    //         // --------------------
+    //         let result = builder.create(fileid, &filename[..], open_mode);
+
+    //         // --------------------
+    //         // THEN
+    //         // the result is a BuildRequestError::Create error and
+    //         // the error msg is for the user name value
+    //         // --------------------
+    //         let val = match result {
+    //             Err(e @ BuildRequestError::Create(_)) => {
+    //                 // Check top-level error
+    //                 let expected = "Unable to build create request message";
+    //                 let ret = e.to_string() == expected;
+
+    //                 // Check cause error
+    //                 if ret {
+    //                     let cause = e.cause().unwrap();
+    //                     let expected = "filename is either empty, \
+    //                                     contains whitespace, or contains \
+    //                                     control characters";
+    //                     cause.to_string() == expected.to_owned()
+    //                 } else {
+    //                     false
+    //                 }
+    //             }
+    //             _ => false,
+    //         };
+
+    //         TestResult::from_bool(val)
+    //     }
+
+    //     fn create_request_message(fileid: u32, filename: String, mode: u8) -> TestResult
+    //     {
+    //         // Ignore invalid filename strings
+    //         if invalid_string(&filename[..]) {
+    //             return TestResult::discard();
+    //         }
+
+    //         // --------------------
+    //         // GIVEN
+    //         // a u32 file id and
+    //         // a valid filename string and
+    //         // an OpenMode object and
+    //         // a RequestBuilder object
+    //         // --------------------
+    //         let open_mode = match OpenMode::from_bits(mode) {
+    //             // Discard any mode that has invalid bits set
+    //             Err(_) => return TestResult::discard(),
+
+    //             Ok(m) => m,
+    //         };
+    //         let builder = request(42);
+
+    //         // --------------------
+    //         // WHEN
+    //         // RequestBuilder::create() is called w/ fileid, filename, and mode
+    //         // --------------------
+    //         let result = builder.create(fileid, &filename[..], open_mode);
+
+    //         // --------------------
+    //         // THEN
+    //         // a request message is returned and
+    //         // the msg has a code of RequestCode::Create and
+    //         // the msg has 3 arguments and
+    //         // the arguments are:
+    //         //     1. u32 file_id
+    //         //     2. &str filename
+    //         //     3. u8 mode
+    //         // and the msg file_id == the given u32 file id and
+    //         // the msg filename == the given String filename and
+    //         // the msg mode == the given u8 mode
+    //         // --------------------
+    //         let val = match result {
+    //             Err(_) => false,
+    //             Ok(msg) => {
+    //                 let args = msg.message_args();
+    //                 let val = msg.message_method() == RequestCode::Create &&
+    //                     args.len() == 3;
+
+    //                 let msg_fileid = args[0].as_u64().unwrap() as u32;
+    //                 let msg_filename = args[1].as_str().unwrap();
+    //                 let msg_mode = args[2].as_u64().unwrap() as u8;
+
+    //                 val &&
+    //                     msg_fileid == fileid &&
+    //                     msg_filename == &filename[..] &&
+    //                     msg_mode == mode
+    //             }
+    //         };
+
+    //         TestResult::from_bool(val)
+    //     }
+    // }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================
