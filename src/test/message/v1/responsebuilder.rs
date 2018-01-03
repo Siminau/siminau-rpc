@@ -1228,6 +1228,98 @@ mod read {
 }
 
 
+mod write {
+
+    // Third party imports
+
+    use proptest::prelude::*;
+
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use core::response::RpcResponse;
+    use message::v1::{request, response, BuildResponseError, RequestCode,
+                      ResponseCode};
+
+    proptest! {
+
+        #[test]
+        fn make_response(count in prop::num::u32::ANY)
+        {
+            // --------------------
+            // GIVEN
+            // a u32 count and
+            // a valid request and
+            // a response builder
+            // --------------------
+            let data = vec![];
+            let req = request(42).write(42, 0, 0, &data).unwrap();
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::write() is called w/ count value
+            // --------------------
+            let result = builder.write(count);
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the msg's code is ResponseCode::Write and
+            // the msg's result is a single u32 value and
+            // the result is equal to count
+            // --------------------
+            // Check basic criteria for valid message
+            let val = match result {
+                Err(_) => false,
+                Ok(msg) => {
+                    let resp_count = msg.result().as_u64().unwrap() as u32;
+                    let val = msg.message_id() == req.message_id() &&
+                        msg.error_code() == ResponseCode::Write &&
+                        resp_count == count;
+                    val
+                }
+            };
+
+            prop_assert!(val);
+        }
+    }
+
+    #[test]
+    fn bad_request() {
+        // --------------------
+        // GIVEN
+        // a u32 count and
+        // a request with code != RequestCode::Write and
+        // a response builder
+        // --------------------
+        let req = request(42).read(42, 0, 42);
+        let builder = response(&req);
+
+        // --------------------
+        // WHEN
+        // ResponseBuilder::write() is called w/ count value
+        // --------------------
+        let result = builder.write(0);
+
+        // --------------------
+        // THEN
+        // an error is returned
+        // --------------------
+        let val = match result {
+            Err(BuildResponseError::WrongCode { value, expected }) => {
+                value == req.message_method() && expected == RequestCode::Write
+            }
+            _ => false,
+        };
+
+        assert!(val);
+    }
+
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================

@@ -404,6 +404,21 @@ impl<'request> ResponseBuilder<'request>
         Ok(resp)
     }
 
+    // Write request succeeded
+    //
+    // Single argument:
+    // 1. Number of bytes written to the file
+    pub fn write(self, count: u32) -> Result<Response, BuildResponseError> {
+        // Make sure request message's code is RequestCode::Walk
+        self.check_request_method(RequestCode::Write)?;
+
+        // Create message
+        let msgid = self.request.message_id();
+        let resp =
+            Response::new(msgid, ResponseCode::Write, Value::from(count));
+        Ok(resp)
+    }
+
     // pub fn version(self, num: u32) -> RpcResult<Response>
     // {
     //     let req = self.request;

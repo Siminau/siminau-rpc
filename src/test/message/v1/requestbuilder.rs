@@ -1061,130 +1061,187 @@ mod read {
             prop_assert_eq!(msg_count, count);
         }
     }
+}
 
-    // quickcheck! {
 
-    //     fn bad_filename(fileid: u32, filename: String, mode: u8) -> TestResult
-    //     {
-    //         // Ignore valid username strings
-    //         if !invalid_string(&filename[..]) {
-    //             return TestResult::discard();
-    //         }
+mod write {
+    // Third party imports
 
-    //         // --------------------
-    //         // GIVEN
-    //         // a u32 file id and
-    //         // a filename string and
-    //         // the filename string may be an empty string and
-    //         // the filename may contain whitespace characters and
-    //         // the filename may contain control characters and
-    //         // an OpenMode object and
-    //         // a request builder
-    //         // --------------------
-    //         let open_mode = match OpenMode::from_bits(mode) {
-    //             // Discard any mode that has invalid bits set
-    //             Err(_) => return TestResult::discard(),
+    use proptest::prelude::*;
 
-    //             Ok(m) => m,
-    //         };
-    //         let builder = request(42);
+    // Local imports
 
-    //         // --------------------
-    //         // WHEN
-    //         // RequestBuilder::create() is called w/ fileid, filename, and mode
-    //         // --------------------
-    //         let result = builder.create(fileid, &filename[..], open_mode);
+    use core::request::RpcRequest;
+    use message::v1::{request, BuildRequestError, RequestCode};
 
-    //         // --------------------
-    //         // THEN
-    //         // the result is a BuildRequestError::Create error and
-    //         // the error msg is for the user name value
-    //         // --------------------
-    //         let val = match result {
-    //             Err(e @ BuildRequestError::Create(_)) => {
-    //                 // Check top-level error
-    //                 let expected = "Unable to build create request message";
-    //                 let ret = e.to_string() == expected;
+    // --------------------
+    // count_datalen_nomatch
+    // --------------------
+    prop_compose! {
+        fn mk_nomatch_veclen(count: u32)
+            (size in (0..1000usize)
+                .prop_filter("Cannot use size the same as count".to_owned(),
+                             move |v| *v as u64 != count as u64)) -> usize
+        {
+            size
+        }
+    }
 
-    //                 // Check cause error
-    //                 if ret {
-    //                     let cause = e.cause().unwrap();
-    //                     let expected = "filename is either empty, \
-    //                                     contains whitespace, or contains \
-    //                                     control characters";
-    //                     cause.to_string() == expected.to_owned()
-    //                 } else {
-    //                     false
-    //                 }
-    //             }
-    //             _ => false,
-    //         };
+    prop_compose! {
+        fn read_bytes_nomatch(count: u32)
+            (size in mk_nomatch_veclen(count))
+            (bytes in prop::collection::vec(prop::num::u8::ANY, size..size+1)) -> Vec<u8>
+        {
+            bytes
+        }
+    }
 
-    //         TestResult::from_bool(val)
-    //     }
+    prop_compose! {
+        fn read_args_nomatch()
+            (count in 0..1000u32)
+            (bytes in read_bytes_nomatch(count), count in Just(count))-> (u32, Vec<u8>)
+        {
+            (count, bytes)
+        }
+    }
 
-    //     fn create_request_message(fileid: u32, filename: String, mode: u8) -> TestResult
-    //     {
-    //         // Ignore invalid filename strings
-    //         if invalid_string(&filename[..]) {
-    //             return TestResult::discard();
-    //         }
+    proptest! {
+        // Generate an error if the count arg does not match the length of bytes
+        #[test]
+        fn count_datalen_nomatch(
+            file_id in prop::num::u32::ANY, offset in prop::num::u64::ANY,
+            (count, ref bytes) in read_args_nomatch()
+        )
+        {
+            // --------------------
+            // GIVEN
+            // a u32 file_id and
+            // a u64 offset and
+            // a u32 count and
+            // a Vec<u8> bytes and
+            // a request builder and
+            // the len of bytes != count
+            // --------------------
+            let builder = request(42);
 
-    //         // --------------------
-    //         // GIVEN
-    //         // a u32 file id and
-    //         // a valid filename string and
-    //         // an OpenMode object and
-    //         // a RequestBuilder object
-    //         // --------------------
-    //         let open_mode = match OpenMode::from_bits(mode) {
-    //             // Discard any mode that has invalid bits set
-    //             Err(_) => return TestResult::discard(),
+            // --------------------
+            // WHEN
+            // RequestBuilder::write() is called w/ file_id, offset, count, and
+            //    bytes
+            // --------------------
+            let result = builder.write(file_id, offset, count, bytes);
 
-    //             Ok(m) => m,
-    //         };
-    //         let builder = request(42);
+            // --------------------
+            // THEN
+            // an error is returned
+            // --------------------
 
-    //         // --------------------
-    //         // WHEN
-    //         // RequestBuilder::create() is called w/ fileid, filename, and mode
-    //         // --------------------
-    //         let result = builder.create(fileid, &filename[..], open_mode);
+            let val = match result {
+                Err(BuildRequestError::Write(c, n)) => {
+                    c == count && n == bytes.len() && c as u64 != n as u64
+                }
+                _ => false,
+            };
 
-    //         // --------------------
-    //         // THEN
-    //         // a request message is returned and
-    //         // the msg has a code of RequestCode::Create and
-    //         // the msg has 3 arguments and
-    //         // the arguments are:
-    //         //     1. u32 file_id
-    //         //     2. &str filename
-    //         //     3. u8 mode
-    //         // and the msg file_id == the given u32 file id and
-    //         // the msg filename == the given String filename and
-    //         // the msg mode == the given u8 mode
-    //         // --------------------
-    //         let val = match result {
-    //             Err(_) => false,
-    //             Ok(msg) => {
-    //                 let args = msg.message_args();
-    //                 let val = msg.message_method() == RequestCode::Create &&
-    //                     args.len() == 3;
+            prop_assert!(val);
+        }
+    }
 
-    //                 let msg_fileid = args[0].as_u64().unwrap() as u32;
-    //                 let msg_filename = args[1].as_str().unwrap();
-    //                 let msg_mode = args[2].as_u64().unwrap() as u8;
+    // --------------------
+    // count_datalen_match
+    // --------------------
+    prop_compose! {
+        fn read_bytes_match(count: u32)
+            (bytes in
+                prop::collection::vec(prop::num::u8::ANY,
+                                      count as usize..(count as usize)+1))
+            -> Vec<u8>
+        {
+            bytes
+        }
+    }
 
-    //                 val &&
-    //                     msg_fileid == fileid &&
-    //                     msg_filename == &filename[..] &&
-    //                     msg_mode == mode
-    //             }
-    //         };
+    prop_compose! {
+        fn read_args_match()
+            (count in 0..1000u32)
+            (bytes in read_bytes_match(count), count in Just(count))-> (u32, Vec<u8>)
+        {
+            (count, bytes)
+        }
+    }
 
-    //         TestResult::from_bool(val)
-    //     }
-    // }
+    proptest! {
+        // Generate response message if the count arg matches the length of bytes
+        #[test]
+        fn count_datalen_match(
+            file_id in prop::num::u32::ANY, offset in prop::num::u64::ANY,
+            (count, ref bytes) in read_args_match()
+        )
+        {
+            // --------------------
+            // GIVEN
+            // a u32 file_id and
+            // a u64 offset and
+            // a u32 count and
+            // a Vec<u8> bytes and
+            // a request builder and
+            // the len of bytes == count
+            // --------------------
+            let msgid = 42;
+            let builder = request(msgid);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::write() is called w/ file_id, offset, count, and
+            //    bytes
+            // --------------------
+            let result = builder.write(file_id, offset, count, bytes);
+
+            // --------------------
+            // THEN
+            // a request message is returned and
+            // the msg's code is RequestCode::Write and
+            // the msg's result is an array of 4 values and
+            // the result array's first item is equal to file_id and
+            // the result array's second item is equal to offset and
+            // the result array's third item is equal to count and
+            // the result array's fourth item is equal to bytes
+            // --------------------
+
+            let val = match result {
+                Err(_) => false,
+                Ok(msg) => {
+                    // Check basic criteria for valid message
+                    let msgargs = msg.message_args();
+                    let val = msg.message_id() == msgid &&
+                        msg.message_method() == RequestCode::Write &&
+                        msgargs.len() == 4;
+
+                    // Get request file_id
+                    let req_file_id = msgargs[0].as_u64().unwrap() as u32;
+
+                    // Get request offset
+                    let req_offset = msgargs[1].as_u64().unwrap();
+
+                    // Get response count
+                    let req_count = msgargs[2].as_u64().unwrap() as u32;
+
+                    // Get response bytes
+                    let req_bytes: Vec<u8> = msgargs[3].as_slice().unwrap().into();
+
+                    prop_assert_eq!(req_file_id as u32, file_id);
+                    prop_assert_eq!(req_offset, offset);
+                    prop_assert_eq!(req_count, count);
+                    prop_assert_eq!(&req_bytes, bytes);
+                    prop_assert_eq!(req_count as usize, req_bytes.len());
+
+                    val
+                }
+            };
+
+            prop_assert!(val);
+        }
+    }
 }
 
 

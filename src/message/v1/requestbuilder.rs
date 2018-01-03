@@ -96,6 +96,11 @@ pub enum BuildRequestError
 
     #[fail(display = "Unable to build create request message")]
     Create(#[cause] CheckNameError),
+
+    #[fail(display = "Unable to build create request message: bytes to write \
+                      ({}) does not match write count ({})",
+           _0, _1)]
+    Write(u32, usize),
 }
 
 
@@ -274,7 +279,8 @@ impl RequestBuilder
     // 1. existing file id
     // 2. starting offset
     // 3. number of bytes to return
-    pub fn read(self, file_id: u32, offset: u64, count: u32) -> Request {
+    pub fn read(self, file_id: u32, offset: u64, count: u32) -> Request
+    {
         let msgargs = vec![
             Value::from(file_id),
             Value::from(offset),
@@ -284,6 +290,40 @@ impl RequestBuilder
         Request::new(self.id, RequestCode::Read, msgargs)
     }
 
+    // Request that a number of bytes be recorded to a file
+    //
+    // 4 arguments:
+    // 1. existing file id
+    // 2. starting offset
+    // 3. number of bytes to write
+    // 4. list of bytes
+    pub fn write<D>(
+        self, file_id: u32, offset: u64, count: u32, data: &D
+    ) -> Result<Request, BuildRequestError>
+    where
+        D: AsRef<[u8]>,
+    {
+        let bytes = data.as_ref();
+        let numbytes = bytes.len();
+
+        // The number of bytes to write must match the value of count
+        if count as u64 != numbytes as u64 {
+            let err = BuildRequestError::Write(count, numbytes);
+            return Err(err);
+        }
+
+        // Create args
+        let msgargs = vec![
+            Value::from(file_id),
+            Value::from(offset),
+            Value::from(count),
+            Value::Binary(bytes.into()),
+        ];
+
+        // Create message
+        let req = Request::new(self.id, RequestCode::Write, msgargs);
+        Ok(req)
+    }
 }
 
 
