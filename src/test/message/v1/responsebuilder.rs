@@ -1065,12 +1065,48 @@ mod read {
 
     use proptest::prelude::*;
 
-
     // Local imports
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use message::v1::{request, response, BuildResponseError, ResponseCode};
+    use message::v1::{request, response, BuildResponseError, RequestCode,
+                      ResponseCode};
+
+    proptest! {
+        #[test]
+        fn bad_request(
+            ref data in prop::collection::vec(prop::num::u8::ANY, 0..1000)
+        )
+        {
+            // --------------------
+            // GIVEN
+            // a Vec<u8> data and
+            // a request with code != RequestCode::Read and
+            // a response builder
+            // --------------------
+            let req = request(42).flush(0).unwrap();
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::read() is called w/ data
+            // --------------------
+            let result = builder.read(data.len() as u32, data);
+
+            // --------------------
+            // THEN
+            // an error is returned
+            // --------------------
+            let val = match result {
+                Err(BuildResponseError::WrongCode { value, expected }) => {
+                    value == req.message_method() && expected == RequestCode::Read
+                }
+                _ => false,
+            };
+
+            assert!(val);
+        }
+    }
 
     // --------------------
     // count_datalen_nomatch

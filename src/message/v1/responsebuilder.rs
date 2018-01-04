@@ -385,6 +385,9 @@ impl<'request> ResponseBuilder<'request>
     where
         D: AsRef<[u8]>,
     {
+        // Make sure request message's code is RequestCode::Read
+        self.check_request_method(RequestCode::Read)?;
+
         let bytes = data.as_ref();
         let numbytes = bytes.len();
 
@@ -409,7 +412,7 @@ impl<'request> ResponseBuilder<'request>
     // Single argument:
     // 1. Number of bytes written to the file
     pub fn write(self, count: u32) -> Result<Response, BuildResponseError> {
-        // Make sure request message's code is RequestCode::Walk
+        // Make sure request message's code is RequestCode::Write
         self.check_request_method(RequestCode::Write)?;
 
         // Create message
