@@ -411,7 +411,8 @@ impl<'request> ResponseBuilder<'request>
     //
     // Single argument:
     // 1. Number of bytes written to the file
-    pub fn write(self, count: u32) -> Result<Response, BuildResponseError> {
+    pub fn write(self, count: u32) -> Result<Response, BuildResponseError>
+    {
         // Make sure request message's code is RequestCode::Write
         self.check_request_method(RequestCode::Write)?;
 
@@ -419,6 +420,21 @@ impl<'request> ResponseBuilder<'request>
         let msgid = self.request.message_id();
         let resp =
             Response::new(msgid, ResponseCode::Write, Value::from(count));
+        Ok(resp)
+    }
+
+    // Clunk request succeeded
+    //
+    // No arguments
+    pub fn clunk(self) -> Result<Response, BuildResponseError>
+    {
+        // Make sure request message's code is RequestCode::Clunk
+        self.check_request_method(RequestCode::Clunk)?;
+
+        // Create message
+        let msgid = self.request.message_id();
+        let resp =
+            Response::new(msgid, ResponseCode::Clunk, Value::Nil);
         Ok(resp)
     }
 

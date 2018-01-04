@@ -1245,6 +1245,52 @@ mod write {
 }
 
 
+mod clunk {
+    // Third party imports
+
+    use proptest::prelude::*;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use message::v1::{request, RequestCode};
+
+    proptest! {
+        #[test]
+        fn build_request(file_id in prop::num::u32::ANY) {
+            // --------------------
+            // GIVEN
+            // a u32 file_id and
+            // a builder
+            // --------------------
+            let msgid = 42;
+            let builder = request(msgid);
+
+            // --------------------
+            // WHEN
+            // RequestBuilder::clunk() is called w/ file_id
+            // --------------------
+            let result = builder.clunk(file_id);
+
+            // --------------------
+            // THEN
+            // a request message is returned and
+            // the msg has method code === RequestCode::Clunk and
+            // the msg has only a single argument and
+            // the msg's argument == file_id
+            // --------------------
+            let req_msgid = result.message_id();
+            let req_args = result.message_args();
+
+            prop_assert_eq!(req_msgid, msgid);
+            prop_assert_eq!(result.message_method(), RequestCode::Clunk);
+            prop_assert_eq!(req_args.len(), 1);
+            prop_assert_eq!(req_args[0].as_u64().unwrap() as u32, file_id);
+        }
+    }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================

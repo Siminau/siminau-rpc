@@ -324,6 +324,19 @@ impl RequestBuilder
         let req = Request::new(self.id, RequestCode::Write, msgargs);
         Ok(req)
     }
+
+    // Forget a file id
+    //
+    // Single argument:
+    // 1. existing file id
+    pub fn clunk(self, file_id: u32) -> Request
+    {
+        // Create args
+        let msgargs = vec![Value::from(file_id)];
+
+        // Create message
+        Request::new(self.id, RequestCode::Clunk, msgargs)
+    }
 }
 
 
