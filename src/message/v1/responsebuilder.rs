@@ -451,6 +451,15 @@ impl<'request> ResponseBuilder<'request>
         Ok(resp)
     }
 
+    // Stat request succeeded
+    //
+    // Single argument:
+    // 1. map of file attributes
+    pub fn stat(self) -> Result<Response, BuildResponseError>
+    {
+        unimplemented!();
+    }
+
     // pub fn version(self, num: u32) -> RpcResult<Response>
     // {
     //     let req = self.request;
