@@ -1441,6 +1441,93 @@ mod clunk {
     }
 }
 
+
+mod remove {
+    // Third party imports
+
+    use proptest::prelude::*;
+    use rmpv::Value;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use core::response::RpcResponse;
+    use message::v1::{request, response, BuildResponseError, RequestCode,
+                      ResponseCode};
+
+    #[test]
+    fn bad_request() {
+        // --------------------
+        // GIVEN
+        // a u32 count and
+        // a request with code != RequestCode::Clunk and
+        // a response builder
+        // --------------------
+        let req = request(42).read(42, 0, 42);
+        let builder = response(&req);
+
+        // --------------------
+        // WHEN
+        // ResponseBuilder::remove() is called
+        // --------------------
+        let result = builder.remove();
+
+        // --------------------
+        // THEN
+        // an error is returned
+        // --------------------
+        let val = match result {
+            Err(BuildResponseError::WrongCode { value, expected }) => {
+                value == req.message_method() && expected == RequestCode::Remove
+            }
+            _ => false,
+        };
+
+        assert!(val);
+    }
+
+    proptest! {
+
+        #[test]
+        fn make_response(file_id in prop::num::u32::ANY)
+        {
+            // --------------------
+            // GIVEN
+            // a u32 file_id and
+            // a valid request and
+            // a response builder
+            // --------------------
+            let req = request(42).remove(file_id);
+            let builder = response(&req);
+
+            // --------------------
+            // WHEN
+            // ResponseBuilder::remove() is called
+            // --------------------
+            let result = builder.remove();
+
+            // --------------------
+            // THEN
+            // a response message is returned and
+            // the msg's code is ResponseCode::Remove and
+            // the msg's result is nil
+            // --------------------
+            // Check basic criteria for valid message
+            let val = match result {
+                Ok(msg) => {
+                    let val = msg.message_id() == req.message_id() &&
+                        msg.error_code() == ResponseCode::Remove &&
+                        msg.result() == &Value::Nil;
+                    val
+                }
+                _ => false
+            };
+            prop_assert!(val);
+        }
+    }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================

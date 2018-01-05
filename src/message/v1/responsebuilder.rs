@@ -433,8 +433,21 @@ impl<'request> ResponseBuilder<'request>
 
         // Create message
         let msgid = self.request.message_id();
-        let resp =
-            Response::new(msgid, ResponseCode::Clunk, Value::Nil);
+        let resp = Response::new(msgid, ResponseCode::Clunk, Value::Nil);
+        Ok(resp)
+    }
+
+    // Remove request succeeded
+    //
+    // No arguments
+    pub fn remove(self) -> Result<Response, BuildResponseError>
+    {
+        // Make sure request message's code is RequestCode::Remove
+        self.check_request_method(RequestCode::Remove)?;
+
+        // Create message
+        let msgid = self.request.message_id();
+        let resp = Response::new(msgid, ResponseCode::Remove, Value::Nil);
         Ok(resp)
     }
 

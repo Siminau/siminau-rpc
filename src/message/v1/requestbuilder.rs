@@ -337,6 +337,19 @@ impl RequestBuilder
         // Create message
         Request::new(self.id, RequestCode::Clunk, msgargs)
     }
+
+    // Remove a file from the server
+    //
+    // Single argument:
+    // 1. existing file id
+    pub fn remove(self, file_id: u32) -> Request
+    {
+        // Create args
+        let msgargs = vec![Value::from(file_id)];
+
+        // Create message
+        Request::new(self.id, RequestCode::Remove, msgargs)
+    }
 }
 
 
