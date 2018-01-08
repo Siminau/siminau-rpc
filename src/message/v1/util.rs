@@ -264,5 +264,30 @@ pub fn openmode() -> OpenModeBuilder
 
 
 // ===========================================================================
+// Stat
+// ===========================================================================
+
+
+pub struct Stat<'file>
+{
+    pub fileid: FileID,
+    // pub mode: u32,
+    //
+    // last access time
+    // date field
+    pub atime: u32,
+
+    // last modified time
+    // date field
+    pub mtime: u32,
+
+    // lenght of file in bytes
+    pub length: u64,
+
+    pub name: &'file str,
+}
+
+
+// ===========================================================================
 //
 // ===========================================================================
