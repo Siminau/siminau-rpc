@@ -32,7 +32,7 @@ use core::response::ResponseMessage;
 pub use self::requestbuilder::{request, BuildRequestError, RequestBuilder};
 pub use self::responsebuilder::{response, BuildResponseError, ResponseBuilder};
 pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode,
-                     OpenModeError};
+                     OpenModeError, Stat};
 
 
 // ===========================================================================

@@ -20,7 +20,8 @@ use core::request::RpcRequest;
 use core::response::RpcResponse;
 
 // Parent-module imports
-use super::{FileID, FileKind, Request, RequestCode, Response, ResponseCode};
+use super::{FileID, FileKind, Request, RequestCode, Response, ResponseCode,
+            Stat};
 
 // ===========================================================================
 // Errors
@@ -454,10 +455,39 @@ impl<'request> ResponseBuilder<'request>
     // Stat request succeeded
     //
     // Single argument:
-    // 1. map of file attributes
-    pub fn stat(self) -> Result<Response, BuildResponseError>
+    // 1. list of values matching Stat struct members
+    pub fn stat(self, stat: &Stat) -> Result<Response, BuildResponseError>
     {
-        unimplemented!();
+        // Make sure request message's code is RequestCode::Stat
+        self.check_request_method(RequestCode::Stat)?;
+
+        // Create message
+        let msgid = self.request.message_id();
+
+        // Create fileid
+        let stat_fileid = &stat.fileid;
+        let fileid = vec![
+            Value::from(stat_fileid.kind.bits()),
+            Value::from(stat_fileid.version),
+            Value::from(stat_fileid.path),
+        ];
+
+        // Create result
+        let result = vec![
+            Value::from(stat.size),
+            Value::Array(fileid),
+            Value::from(stat.mode),
+            Value::from(stat.atime),
+            Value::from(stat.mtime),
+            Value::from(stat.length),
+            Value::from(stat.name),
+            Value::from(stat.uid),
+            Value::from(stat.gid),
+            Value::from(stat.muid),
+        ];
+
+        let resp = Response::new(msgid, ResponseCode::Stat, Value::Array(result));
+        Ok(resp)
     }
 
     // pub fn version(self, num: u32) -> RpcResult<Response>

@@ -270,7 +270,15 @@ pub fn openmode() -> OpenModeBuilder
 
 pub struct Stat<'file>
 {
+    // Total byte count of all fields excet for size
+    pub size: u16,
+
     pub fileid: FileID,
+
+    // File attributes and permissions
+    // The high 8 bits are a copy of FileKind, and the other 24 bits are for
+    // permissions
+    pub mode: u32,
 
     // last access time
     // date field
@@ -286,11 +294,14 @@ pub struct Stat<'file>
     // File name
     pub name: &'file str,
 
-    // name of the user who last modified the file
-    pub muser: &'file str,
+    // Owner name
+    pub uid: &'file str,
 
-    // whether or not to use capabilities for file permissions
-    pub usecap: bool,
+    // Group name
+    pub gid: &'file str,
+
+    // name of the user who last modified the file
+    pub muid: &'file str,
 }
 
 

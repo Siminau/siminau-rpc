@@ -20,7 +20,8 @@
 // ===========================================================================
 
 
-mod auth {
+mod auth
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -59,10 +60,11 @@ mod auth {
         // --------------------
         let val = match result {
             Err(e @ BuildResponseError::Auth(_)) => {
-                let expected = format!("Unable to build auth response \
-                                        message: file id has invalid \
-                                        kind {}",
-                                       fileid.kind.bits());
+                let expected = format!(
+                    "Unable to build auth response message: file id has \
+                     invalid kind {}",
+                    fileid.kind.bits()
+                );
                 e.to_string() == expected
             }
             _ => false,
@@ -184,7 +186,8 @@ mod auth {
     }
 }
 
-mod flush {
+mod flush
+{
     // Third party imports
 
     // use rmpv::Value;
@@ -289,7 +292,8 @@ mod flush {
 }
 
 
-mod attach {
+mod attach
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -337,10 +341,11 @@ mod attach {
         // --------------------
         let val = match result {
             Err(e @ BuildResponseError::Attach(_)) => {
-                let expected = format!("Unable to build attach response \
-                                        message: rootfile_id has invalid \
-                                        kind {}",
-                                       fileid.kind.bits());
+                let expected = format!(
+                    "Unable to build attach response message: rootfile_id has \
+                     invalid kind {}",
+                    fileid.kind.bits()
+                );
                 e.to_string() == expected
             }
             _ => false,
@@ -470,7 +475,8 @@ mod attach {
     }
 }
 
-mod walk {
+mod walk
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -696,7 +702,8 @@ mod walk {
 }
 
 
-mod open {
+mod open
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -870,7 +877,8 @@ mod open {
 }
 
 
-mod create {
+mod create
+{
     // Third party imports
 
     use quickcheck::TestResult;
@@ -1060,7 +1068,8 @@ mod create {
 }
 
 
-mod read {
+mod read
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1264,7 +1273,8 @@ mod read {
 }
 
 
-mod write {
+mod write
+{
 
     // Third party imports
 
@@ -1323,7 +1333,8 @@ mod write {
     }
 
     #[test]
-    fn bad_request() {
+    fn bad_request()
+    {
         // --------------------
         // GIVEN
         // a u32 count and
@@ -1356,7 +1367,8 @@ mod write {
 }
 
 
-mod clunk {
+mod clunk
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1370,7 +1382,8 @@ mod clunk {
                       ResponseCode};
 
     #[test]
-    fn bad_request() {
+    fn bad_request()
+    {
         // --------------------
         // GIVEN
         // a u32 count and
@@ -1442,7 +1455,8 @@ mod clunk {
 }
 
 
-mod remove {
+mod remove
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1456,7 +1470,8 @@ mod remove {
                       ResponseCode};
 
     #[test]
-    fn bad_request() {
+    fn bad_request()
+    {
         // --------------------
         // GIVEN
         // a u32 count and
@@ -1524,6 +1539,35 @@ mod remove {
             };
             prop_assert!(val);
         }
+    }
+}
+
+
+mod stat
+{
+    // Third party imports
+
+    use proptest::prelude::*;
+    use rmpv::Value;
+
+    // Local imports
+
+    use core::request::RpcRequest;
+    use core::response::RpcResponse;
+    use message::v1::{request, response, BuildResponseError, RequestCode,
+                      ResponseCode, Stat};
+
+    // Helpers
+    use test::message::v1::invalid_string;
+
+    #[test]
+    fn has_portable_username()
+    {
+    }
+
+    #[test]
+    fn has_portable_groupname()
+    {
     }
 }
 
