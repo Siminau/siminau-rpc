@@ -1554,79 +1554,63 @@ mod stat
 
     use core::request::RpcRequest;
     use core::response::RpcResponse;
-    use message::v1::{request, response, BuildResponseError, FileKind,
+    use message::v1::{request, response, BuildResponseError, FileID, FileKind,
                       RequestCode, ResponseCode, Stat};
 
     // Helpers
     use test::message::v1::invalid_string;
+    use test::message::v1::util::{choose_invalid_fileid, choose_valid_fileid};
 
-    prop_compose! {
-        fn choose_valid_u8()
-            (val in (prop::num::u8::ANY)
-                 .prop_filter("Values must be valid FileKind u8".to_owned(),
-                              |v| {
-                                  v & 0b00000111 == 0 &&
-                                      FileKind::from_bits(*v).is_some()
-                              })) -> u8
-        {
-            val
-        }
-    }
+    // --------------------
+    // Helpers
+    // --------------------
 
-    prop_compose! {
-        fn choose_valid_filekind()
-            (val in choose_valid_u8()
-                 .prop_filter("Values must be a valid FileKind".to_owned(),
-                              |v| FileKind::from_bits(*v).unwrap().is_valid())) -> FileKind
-        {
-            FileKind::from_bits(val).unwrap()
-        }
-    }
+    // proptest! {
+    //     #[test]
+    //     fn bad_request()
+    //     {
+    //         // --------------------
+    //         // GIVEN
+    //         // a u32 and
+    //         // a request with code != RequestCode::Stat and
+    //         // a response builder
+    //         // --------------------
+    //         let req_fileid = 42;
+    //         let req = request(42).remove(req_fileid);
+    //         let builder = response(&req);
+    //         let stat = Stat {
+    //         };
 
-    // #[test]
-    // fn bad_request()
-    // {
-    //     // --------------------
-    //     // GIVEN
-    //     // a u32 and
-    //     // a request with code != RequestCode::Stat and
-    //     // a response builder
-    //     // --------------------
-    //     let req_fileid = 42;
-    //     let req = request(42).remove(req_fileid);
-    //     let builder = response(&req);
-    //     let stat = Stat {
-    //     };
+    //         // --------------------
+    //         // WHEN
+    //         // ResponseBuilder::stat() is called
+    //         // --------------------
+    //         let result = builder.stat();
 
-    //     // --------------------
-    //     // WHEN
-    //     // ResponseBuilder::stat() is called
-    //     // --------------------
-    //     let result = builder.stat();
+    //         // --------------------
+    //         // THEN
+    //         // an error is returned
+    //         // --------------------
+    //         let val = match result {
+    //             Err(BuildResponseError::WrongCode { value, expected }) => {
+    //                 value == req.message_method() && expected == RequestCode::Remove
+    //             }
+    //             _ => false,
+    //         };
 
-    //     // --------------------
-    //     // THEN
-    //     // an error is returned
-    //     // --------------------
-    //     let val = match result {
-    //         Err(BuildResponseError::WrongCode { value, expected }) => {
-    //             value == req.message_method() && expected == RequestCode::Remove
-    //         }
-    //         _ => false,
-    //     };
-
-    //     assert!(val);
+    //         assert!(val);
+    //     }
     // }
 
-    proptest! {
-        #[test]
-        fn test_tmp(val in choose_valid_filekind())
-        {
-            // let invalid = 0b00000111;
-            // prop_assert!(val & invalid == 0);
-            println!("{:?}", val);
-        }
-    }
+    // proptest! {
+    //     #[test]
+    //     fn test_tmp(val in choose_valid_filekind())
+    //     {
+    //         // let invalid = 0b00000111;
+    //         // prop_assert!(val & invalid == 0);
+    //         println!("{:?}", val);
+    //     }
+    // }
 
     // #[test]
     // fn has_portable_username()

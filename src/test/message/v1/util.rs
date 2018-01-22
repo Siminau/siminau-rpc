@@ -11,17 +11,164 @@
 // Stdlib imports
 
 // Third-party imports
+use proptest::prelude::*;
 
 // Local imports
+use message::v1::{FileID, FileKind};
+
+// ===========================================================================
+// Helpers
+// ===========================================================================
+
+
+fn is_invalid_filekind_u8(v: u8) -> bool
+{
+    v & 0b00000111 != 0 && FileKind::from_bits(v).is_some()
+}
+
+fn is_valid_filekind_u8(v: u8) -> bool
+{
+    v & 0b00000111 == 0 && FileKind::from_bits(v).is_some()
+}
+
+// --------------------
+// Invalid FileID
+// --------------------
+
+prop_compose! {
+    fn choose_invalid_u8()
+        (val in (prop::num::u8::ANY)
+             .prop_filter("Values must be invalid FileKind u8".to_owned(),
+                          |v| is_invalid_filekind_u8(*v))) -> u8
+    {
+        val
+    }
+}
+
+prop_compose! {
+    fn choose_invalid_filekind()
+        (val in choose_invalid_u8()
+             .prop_filter("Values must be an invalid FileKind".to_owned(),
+                          |v| !FileKind::from_bits(*v).unwrap().is_valid()))
+        -> FileKind
+    {
+        FileKind::from_bits(val).unwrap()
+    }
+}
+
+prop_compose! {
+    fn choose_invalid_fileid()
+        (kind in choose_invalid_filekind(),
+         version in prop::num::u32::ANY,
+         path in prop::num::u64::ANY)
+        -> FileID
+    {
+        FileID {
+            kind,
+            version,
+            path
+        }
+    }
+}
+
+// --------------------
+// Valid FileID
+// --------------------
+prop_compose! {
+    fn choose_valid_u8()
+        (val in (prop::num::u8::ANY)
+             .prop_filter("Values must be valid FileKind u8".to_owned(),
+                          |v| is_valid_filekind_u8(*v))) -> u8
+    {
+        val
+    }
+}
+
+prop_compose! {
+    fn choose_valid_filekind()
+        (val in choose_valid_u8()
+             .prop_filter("Values must be a valid FileKind".to_owned(),
+                          |v| FileKind::from_bits(*v).unwrap().is_valid()))
+        -> FileKind
+    {
+        FileKind::from_bits(val).unwrap()
+    }
+}
+
+prop_compose! {
+    fn choose_valid_fileid()
+        (kind in choose_valid_filekind(),
+         version in prop::num::u32::ANY,
+         path in prop::num::u64::ANY)
+        -> FileID
+    {
+        FileID {
+            kind,
+            version,
+            path
+        }
+    }
+}
+
+// --------------------
+// File names
+// --------------------
+
+// A valid filename is either a single foreslash (ie '/') character, or one or
+// more of any non-control, non-foreslash character
+prop_compose! {
+    fn choose_valid_filename()
+        (n in r#"[\PC[^/]]+|/"#)
+        -> String
+    {
+        n
+    }
+}
+
+prop_compose! {
+    fn choose_invalid_filename()
+        (n in r#"[\pC[/]]*"#)
+        -> String
+    {
+        n
+    }
+}
+
+// --------------------
+// User and group names
+// --------------------
+
+// A valid username is one or more of any unicode letter, unicode decimal digit,
+// or underscore character
+prop_compose! {
+    fn choose_valid_authname()
+        (n in r#"[\pL\p{Nd}_]+"#)
+        -> String
+    {
+        n
+    }
+}
+
+prop_compose! {
+    fn choose_invalid_authname()
+        (n in r#"[\PL\P{Nd}]*"#)
+        -> String
+    {
+        n
+    }
+}
+
 
 // ===========================================================================
 // Tests
 // ===========================================================================
 
 
-mod openmode {
+mod openmode
+{
 
-    mod default {
+    mod default
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -53,7 +200,8 @@ mod openmode {
         }
     }
 
-    mod from_bits {
+    mod from_bits
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -127,7 +275,8 @@ mod openmode {
         }
     }
 
-    mod flags {
+    mod flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -186,7 +335,8 @@ mod openmode {
         }
     }
 
-    mod kind {
+    mod kind
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -245,7 +395,8 @@ mod openmode {
         }
     }
 
-    mod new_kind {
+    mod new_kind
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -285,7 +436,8 @@ mod openmode {
         }
     }
 
-    mod replace_flags {
+    mod replace_flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -324,7 +476,8 @@ mod openmode {
         }
     }
 
-    mod insert_flags {
+    mod insert_flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -365,7 +518,8 @@ mod openmode {
         }
     }
 
-    mod remove_flags {
+    mod remove_flags
+    {
         // Stdlib imports
 
         // Third-party imports
@@ -432,7 +586,8 @@ mod openmode {
         }
     }
 
-    mod toggle_flags {
+    mod toggle_flags
+    {
         // Stdlib imports
 
         // Third-party imports
