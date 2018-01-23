@@ -1545,6 +1545,9 @@ mod remove
 
 mod stat
 {
+    // Stdlib imports
+    use std::mem::size_of_val;
+
     // Third party imports
 
     use proptest::prelude::*;
@@ -1555,15 +1558,194 @@ mod stat
     use core::request::RpcRequest;
     use core::response::RpcResponse;
     use message::v1::{request, response, BuildResponseError, FileID, FileKind,
-                      RequestCode, ResponseCode, Stat};
+                      OwnedStat, RequestCode, ResponseCode, Stat};
 
     // Helpers
     use test::message::v1::invalid_string;
-    use test::message::v1::util::{choose_invalid_fileid, choose_valid_fileid};
+    // use test::message::v1::util::{invalid_fileid, valid_stat};
 
     // --------------------
     // Helpers
     // --------------------
+
+    fn is_invalid_filekind_u8(v: u8) -> bool
+    {
+        v & 0b00000111 != 0 && FileKind::from_bits(v).is_some()
+    }
+
+    fn is_valid_filekind_u8(v: u8) -> bool
+    {
+        v & 0b00000111 == 0 && FileKind::from_bits(v).is_some()
+    }
+
+    // --------------------
+    // Invalid FileID
+    // --------------------
+
+    prop_compose! {
+        fn invalid_u8()
+            (val in (prop::num::u8::ANY)
+                 .prop_filter("Values must be invalid FileKind u8".to_owned(),
+                              |v| is_invalid_filekind_u8(*v))) -> u8
+        {
+            val
+        }
+    }
+
+    prop_compose! {
+        fn invalid_filekind()
+            (val in invalid_u8()
+                 .prop_filter("Values must be an invalid FileKind".to_owned(),
+                              |v| !FileKind::from_bits(*v).unwrap().is_valid()))
+            -> FileKind
+        {
+            FileKind::from_bits(val).unwrap()
+        }
+    }
+
+    prop_compose! {
+        fn invalid_fileid()
+            (kind in invalid_filekind(),
+             version in prop::num::u32::ANY,
+             path in prop::num::u64::ANY)
+            -> FileID
+        {
+            FileID {
+                kind,
+                version,
+                path
+            }
+        }
+    }
+
+    // --------------------
+    // Valid FileID
+    // --------------------
+    prop_compose! {
+        fn valid_u8()
+            (val in (prop::num::u8::ANY)
+                 .prop_filter("Values must be valid FileKind u8".to_owned(),
+                              |v| is_valid_filekind_u8(*v))) -> u8
+        {
+            val
+        }
+    }
+
+    prop_compose! {
+        fn valid_filekind()
+            (val in valid_u8()
+                 .prop_filter("Values must be a valid FileKind".to_owned(),
+                              |v| FileKind::from_bits(*v).unwrap().is_valid()))
+            -> FileKind
+        {
+            FileKind::from_bits(val).unwrap()
+        }
+    }
+
+    prop_compose! {
+        fn valid_fileid()
+            (kind in valid_filekind(),
+             version in prop::num::u32::ANY,
+             path in prop::num::u64::ANY)
+            -> FileID
+        {
+            FileID {
+                kind,
+                version,
+                path
+            }
+        }
+    }
+
+    // --------------------
+    // File names
+    // --------------------
+
+    // A valid filename is either a single foreslash (ie '/') character, or one or
+    // more of any non-control, non-foreslash character
+    prop_compose! {
+        fn valid_filename()
+            (n in r#"[\PC[^/]]+|/"#)
+            -> String
+        {
+            n
+        }
+    }
+
+    prop_compose! {
+        fn invalid_filename()
+            (n in r#"[\pC[/]]*"#)
+            -> String
+        {
+            n
+        }
+    }
+
+    // --------------------
+    // User and group names
+    // --------------------
+
+    // A valid username is one or more of any unicode letter, unicode decimal digit,
+    // or underscore character
+    prop_compose! {
+        fn valid_authname()
+            (n in r#"[\pL\p{Nd}_]+"#)
+            -> String
+        {
+            n
+        }
+    }
+
+    prop_compose! {
+        fn invalid_authname()
+            (n in r#"[\PL\P{Nd}]*"#)
+            -> String
+        {
+            n
+        }
+    }
+
+    // --------------------
+    // Stat
+    // --------------------
+
+    prop_compose! {
+        fn valid_stat()
+            (fileid in valid_fileid(),
+             mode in prop::num::u32::ANY,
+             atime in prop::num::u32::ANY,
+             mtime in prop::num::u32::ANY,
+             length in prop::num::u64::ANY,
+             ref name in valid_filename(),
+             ref uid in valid_authname(),
+             ref gid in valid_authname(),
+             ref muid in valid_authname())
+            -> OwnedStat
+        {
+            let filename = name.clone();
+            let fileuid = uid.clone();
+            let filegid = gid.clone();
+            let filemuid = muid.clone();
+            let strsize = vec![&filename, &fileuid, &filegid, &filemuid]
+                .iter()
+                .fold(0, |acc, &el| acc + el.len());
+            let size = (strsize + size_of_val(&fileid) + size_of_val(&mode) +
+                        size_of_val(&atime) + size_of_val(&mtime) +
+                        size_of_val(&length)) as u16;
+            OwnedStat {
+                size,
+                fileid,
+                mode,
+                atime,
+                mtime,
+                length,
+                name: filename,
+                uid: fileuid,
+                gid: filegid,
+                muid: filemuid
+            }
+        }
+    }
 
     // proptest! {
     //     #[test]
@@ -1602,15 +1784,16 @@ mod stat
     //     }
     // }
 
-    // proptest! {
-    //     #[test]
-    //     fn test_tmp(val in choose_valid_filekind())
-    //     {
-    //         // let invalid = 0b00000111;
-    //         // prop_assert!(val & invalid == 0);
-    //         println!("{:?}", val);
-    //     }
-    // }
+    proptest! {
+        #[test]
+        fn test_tmp(ref val in valid_stat())
+        {
+            // let invalid = 0b00000111;
+            // prop_assert!(val & invalid == 0);
+            // println!("{:?}", val);
+            prop_assert!(true);
+        }
+    }
 
     // #[test]
     // fn has_portable_username()

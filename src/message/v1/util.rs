@@ -48,7 +48,7 @@ impl FileKind
 }
 
 
-#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct FileID
 {
     pub kind: FileKind,
@@ -268,6 +268,7 @@ pub fn openmode() -> OpenModeBuilder
 // ===========================================================================
 
 
+#[derive(Debug)]
 pub struct Stat<'file>
 {
     // Total byte count of all fields excet for size
@@ -302,6 +303,44 @@ pub struct Stat<'file>
 
     // name of the user who last modified the file
     pub muid: &'file str,
+}
+
+
+#[derive(Debug)]
+pub struct OwnedStat
+{
+    // Total byte count of all fields excet for size
+    pub size: u16,
+
+    pub fileid: FileID,
+
+    // File attributes and permissions
+    // The high 8 bits are a copy of FileKind, and the other 24 bits are for
+    // permissions
+    pub mode: u32,
+
+    // last access time
+    // date field
+    pub atime: u32,
+
+    // last modified time
+    // date field
+    pub mtime: u32,
+
+    // length of file in bytes
+    pub length: u64,
+
+    // File name
+    pub name: String,
+
+    // Owner name
+    pub uid: String,
+
+    // Group name
+    pub gid: String,
+
+    // name of the user who last modified the file
+    pub muid: String,
 }
 
 

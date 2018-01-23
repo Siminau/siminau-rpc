@@ -486,7 +486,8 @@ impl<'request> ResponseBuilder<'request>
             Value::from(stat.muid),
         ];
 
-        let resp = Response::new(msgid, ResponseCode::Stat, Value::Array(result));
+        let resp =
+            Response::new(msgid, ResponseCode::Stat, Value::Array(result));
         Ok(resp)
     }
 
