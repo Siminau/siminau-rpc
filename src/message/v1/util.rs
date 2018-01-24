@@ -344,6 +344,46 @@ pub struct OwnedStat
 }
 
 
+impl OwnedStat
+{
+    pub fn as_stat(&self) -> Stat
+    {
+        Stat {
+            size: self.size,
+            fileid: self.fileid,
+            mode: self.mode,
+            atime: self.atime,
+            mtime: self.mtime,
+            length: self.length,
+            name: self.name.as_str(),
+            uid: self.uid.as_str(),
+            gid: self.gid.as_str(),
+            muid: self.muid.as_str(),
+        }
+    }
+}
+
+
+impl<'file> From<Stat<'file>> for OwnedStat
+{
+    fn from(s: Stat) -> OwnedStat
+    {
+        OwnedStat {
+            size: s.size,
+            fileid: s.fileid,
+            mode: s.mode,
+            atime: s.atime,
+            mtime: s.mtime,
+            length: s.length,
+            name: String::from(s.name),
+            uid: String::from(s.uid),
+            gid: String::from(s.gid),
+            muid: String::from(s.muid),
+        }
+    }
+}
+
+
 // ===========================================================================
 //
 // ===========================================================================
