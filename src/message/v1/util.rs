@@ -9,6 +9,7 @@
 
 
 // Stdlib imports
+use std::mem::size_of_val;
 
 // Third-party imports
 
@@ -268,48 +269,26 @@ pub fn openmode() -> OpenModeBuilder
 // ===========================================================================
 
 
-#[derive(Debug)]
-pub struct Stat<'file>
+pub trait ReadStat
 {
-    // Total byte count of all fields excet for size
-    pub size: u16,
-
-    pub fileid: FileID,
-
-    // File attributes and permissions
-    // The high 8 bits are a copy of FileKind, and the other 24 bits are for
-    // permissions
-    pub mode: u32,
-
-    // last access time
-    // date field
-    pub atime: u32,
-
-    // last modified time
-    // date field
-    pub mtime: u32,
-
-    // length of file in bytes
-    pub length: u64,
-
-    // File name
-    pub name: &'file str,
-
-    // Owner name
-    pub uid: &'file str,
-
-    // Group name
-    pub gid: &'file str,
-
-    // name of the user who last modified the file
-    pub muid: &'file str,
+    fn calculate_size(&self) -> u16;
+    fn size(&self) -> u16;
+    fn fileid(&self) -> FileID;
+    fn mode(&self) -> u32;
+    fn atime(&self) -> u32;
+    fn mtime(&self) -> u32;
+    fn length(&self) -> u64;
+    fn name(&self) -> &str;
+    fn uid(&self) -> &str;
+    fn gid(&self) -> &str;
+    fn muid(&self) -> &str;
 }
 
 
 #[derive(Debug)]
-pub struct OwnedStat
+pub struct StatData
 {
-    // Total byte count of all fields excet for size
+    // Total byte count of all fields except for size
     pub size: u16,
 
     pub fileid: FileID,
@@ -344,44 +323,247 @@ pub struct OwnedStat
 }
 
 
-impl OwnedStat
+impl StatData
 {
-    pub fn as_stat(&self) -> Stat
+    fn calculate_size(&self) -> u16
     {
-        Stat {
-            size: self.size,
-            fileid: self.fileid,
-            mode: self.mode,
-            atime: self.atime,
-            mtime: self.mtime,
-            length: self.length,
-            name: self.name.as_str(),
-            uid: self.uid.as_str(),
-            gid: self.gid.as_str(),
-            muid: self.muid.as_str(),
-        }
+        let strsize = vec![self.name, self.uid, self.gid, self.muid]
+            .iter()
+            .fold(0, |acc, &el| acc + el.len());
+        let size = (strsize + size_of_val(&self.fileid)
+            + size_of_val(&self.mode)
+            + size_of_val(&self.atime)
+            + size_of_val(&self.mtime)
+            + size_of_val(&self.length)) as u16;
+        size
     }
 }
 
 
-impl<'file> From<Stat<'file>> for OwnedStat
+#[derive(Debug)]
+pub struct FileStat
 {
-    fn from(s: Stat) -> OwnedStat
+    data: StatData,
+}
+
+
+#[derive(Debug, Fail)]
+#[fail(display = "Expected size {}, got size {}", expected_size, size)]
+pub struct FromStatError
+{
+    expected_size: u16,
+    size: u16,
+}
+
+
+impl FileStat
+{
+    fn validate_stat(self) -> Result<Self, FromStatError>
     {
-        OwnedStat {
-            size: s.size,
-            fileid: s.fileid,
-            mode: s.mode,
-            atime: s.atime,
-            mtime: s.mtime,
-            length: s.length,
-            name: String::from(s.name),
-            uid: String::from(s.uid),
-            gid: String::from(s.gid),
-            muid: String::from(s.muid),
+        let size = self.calculate_size();
+        if size != self.data.size {
+            Err(FromStatError {
+                expected_size: size,
+                size: self.data.size,
+            })
+        } else {
+            Ok(self)
         }
     }
+
+    pub fn from_stat<T>(stat: T) -> Result<FileStat, FromStatError>
+    where
+        T: ReadStat,
+    {
+        let data = StatData {
+            size: stat.size(),
+            fileid: stat.fileid(),
+            mode: stat.mode(),
+            atime: stat.atime(),
+            mtime: stat.mtime(),
+            length: stat.length(),
+            name: String::from(stat.name()),
+            uid: String::from(stat.uid()),
+            gid: String::from(stat.gid()),
+            muid: String::from(stat.muid()),
+        };
+        let ret = FileStat { data };
+        ret.validate_stat()
+    }
 }
+
+
+impl ReadStat for FileStat
+{
+    fn calculate_size(&self) -> u16
+    {
+        self.data.calculate_size()
+    }
+
+    fn size(&self) -> u16
+    {
+        self.data.size
+    }
+
+    fn fileid(&self) -> FileID
+    {
+        self.data.fileid
+    }
+
+    fn mode(&self) -> u32
+    {
+        self.data.mode
+    }
+
+    fn atime(&self) -> u32
+    {
+        self.data.atime
+    }
+
+    fn mtime(&self) -> u32
+    {
+        self.data.mtime
+    }
+
+    fn length(&self) -> u64
+    {
+        self.data.length
+    }
+
+    fn name(&self) -> &str
+    {
+        self.data.name.as_str()
+    }
+
+    fn uid(&self) -> &str
+    {
+        self.data.uid.as_str()
+    }
+
+    fn gid(&self) -> &str
+    {
+        self.data.gid.as_str()
+    }
+
+    fn muid(&self) -> &str
+    {
+        self.data.muid.as_str()
+    }
+}
+
+
+// #[derive(Debug)]
+// pub struct Stat<'file>
+// {
+//     // Total byte count of all fields except for size
+//     pub size: u16,
+
+//     pub fileid: FileID,
+
+//     // File attributes and permissions
+//     // The high 8 bits are a copy of FileKind, and the other 24 bits are for
+//     // permissions
+//     pub mode: u32,
+
+//     // last access time
+//     // date field
+//     pub atime: u32,
+
+//     // last modified time
+//     // date field
+//     pub mtime: u32,
+
+//     // length of file in bytes
+//     pub length: u64,
+
+//     // File name
+//     pub name: &'file str,
+
+//     // Owner name
+//     pub uid: &'file str,
+
+//     // Group name
+//     pub gid: &'file str,
+
+//     // name of the user who last modified the file
+//     pub muid: &'file str,
+// }
+
+
+
+
+// impl FileStat
+// {
+//     pub fn as_stat(&self) -> Stat
+//     {
+//         Stat {
+//             size: self.size,
+//             fileid: self.fileid,
+//             mode: self.mode,
+//             atime: self.atime,
+//             mtime: self.mtime,
+//             length: self.length,
+//             name: self.name.as_str(),
+//             uid: self.uid.as_str(),
+//             gid: self.gid.as_str(),
+//             muid: self.muid.as_str(),
+//         }
+//     }
+// }
+
+
+// impl<'file> From<Stat<'file>> for FileStat
+// {
+//     fn from(s: Stat) -> FileStat
+//     {
+//         FileStat {
+//             size: s.size,
+//             fileid: s.fileid,
+//             mode: s.mode,
+//             atime: s.atime,
+//             mtime: s.mtime,
+//             length: s.length,
+//             name: String::from(s.name),
+//             uid: String::from(s.uid),
+//             gid: String::from(s.gid),
+//             muid: String::from(s.muid),
+//         }
+//     }
+// }
+
+
+// // Trait used to calculate the size of a Stat or FileStat object
+// pub trait CalculateSize
+// {
+//     fn calculate_size(&self) -> u16;
+// }
+
+
+// impl<'file> CalculateSize for Stat<'file>
+// {
+//     fn calculate_size(&self) -> u16
+//     {
+//         let strsize = vec![&self.name, &self.uid, &self.gid, &self.muid]
+//             .iter()
+//             .fold(0, |acc, &el| acc + el.len());
+//         let size = (strsize + size_of_val(&self.fileid)
+//             + size_of_val(&self.mode)
+//             + size_of_val(&self.atime)
+//             + size_of_val(&self.mtime)
+//             + size_of_val(&self.length)) as u16;
+//         size
+//     }
+// }
+
+
+// impl CalculateSize for FileStat
+// {
+//     fn calculate_size(&self) -> u16
+//     {
+//         self.as_stat().calculate_size()
+//     }
+// }
+
 
 
 // ===========================================================================
