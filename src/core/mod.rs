@@ -128,23 +128,21 @@
 //! }
 //! # }
 //! ```
-//!
-
+//! 
 
 // ===========================================================================
 // Modules
 // ===========================================================================
 
-
 pub mod request;
 pub mod response;
 pub mod notify;
 
+pub mod new;
 
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 
@@ -161,11 +159,9 @@ use serde::{Deserialize, Serialize};
 
 // Local imports
 
-
 // ===========================================================================
 // Helpers
 // ===========================================================================
-
 
 // Return the name of a Value variant
 pub fn value_type(arg: &Value) -> String
@@ -185,7 +181,6 @@ pub fn value_type(arg: &Value) -> String
     String::from(ret)
 }
 
-
 #[derive(Debug, Fail)]
 pub enum CheckIntError
 {
@@ -195,13 +190,13 @@ pub enum CheckIntError
         expected: String
     },
 
-    #[fail(display = "Expected value <= {} but got value {}", max_value, value)]
+    #[fail(display = "Expected value <= {} but got value {}", max_value,
+           value)]
     ValueTooBig
     {
         max_value: u64, value: String
     },
 }
-
 
 /// Check if an unsigned integer value can be cast as a given integer type.
 ///
@@ -229,11 +224,9 @@ pub fn check_int(
     }
 }
 
-
 // ===========================================================================
 // CodeConvert
 // ===========================================================================
-
 
 #[derive(Fail, Debug)]
 #[fail(display = "Unknown code value: {}", code)]
@@ -241,7 +234,6 @@ pub struct CodeValueError
 {
     pub code: u64,
 }
-
 
 /// Allows converting between a number and a type.
 ///
@@ -281,11 +273,9 @@ pub trait CodeConvert<T>: Clone + PartialEq
     fn cast_number(n: u64) -> Option<Self::int_type>;
 }
 
-
 // ===========================================================================
 // MessageType
 // ===========================================================================
-
 
 /// Enum defining different types of messages
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
@@ -301,11 +291,9 @@ pub enum MessageType
     Notification,
 }
 
-
 // ===========================================================================
 // Message traits
 // ===========================================================================
-
 
 pub trait FromMessage<M>
 {
@@ -317,10 +305,10 @@ pub trait FromMessage<M>
         Self: Sized;
 }
 
-
 // Default implementation of FromMessage<Value> for specific message types
 impl<M> FromMessage<Value> for M
-    where M: RpcMessage + RpcMessageType + FromMessage<Message>
+where
+    M: RpcMessage + RpcMessageType + FromMessage<Message>,
 {
     type Err = <M as FromMessage<Message>>::Err;
 
@@ -334,7 +322,6 @@ impl<M> FromMessage<Value> for M
         Self::from_msg(msg)
     }
 }
-
 
 /// Define methods common to all RPC messages
 pub trait RpcMessage
@@ -359,7 +346,6 @@ pub trait RpcMessage
     }
 }
 
-
 /// Define methods common to all RPC message types.
 pub trait RpcMessageType
 {
@@ -367,19 +353,20 @@ pub trait RpcMessageType
     fn as_message(&self) -> &Message;
 }
 
-
 pub trait AsBytes<V>
-    where V: AsRef<[u8]>,
+where
+    V: AsRef<[u8]>,
 {
     fn as_bytes(&self) -> V;
 }
 
-
 impl<T> AsBytes<Bytes> for T
-    where T: RpcMessage,
+where
+    T: RpcMessage,
 {
     // TODO: should there be an unwrap here?
-    fn as_bytes(&self) -> Bytes {
+    fn as_bytes(&self) -> Bytes
+    {
         let mut tmpbuf = Vec::new();
         let msg = self.as_value();
         msg.serialize(&mut Serializer::new(&mut tmpbuf)).unwrap();
@@ -389,10 +376,10 @@ impl<T> AsBytes<Bytes> for T
     }
 }
 
-
 #[derive(Debug, Fail)]
 pub enum FromBytesError<E>
-    where E: Fail
+where
+    E: Fail,
 {
     #[fail(display = "MsgPack error: invalid marker")]
     InvalidMarkerRead(#[cause] io::Error),
@@ -425,66 +412,76 @@ pub enum FromBytesError<E>
     InvalidMessage(#[cause] E),
 }
 
-
 impl<E> From<decode::Error> for FromBytesError<E>
-    where E: Fail
+where
+    E: Fail,
 {
-    fn from(e: decode::Error) -> FromBytesError<E> {
+    fn from(e: decode::Error) -> FromBytesError<E>
+    {
         match e {
-            decode::Error::InvalidMarkerRead(err) => FromBytesError::InvalidMarkerRead(err),
-            decode::Error::InvalidDataRead(err) => FromBytesError::InvalidDataRead(err),
-            err @ decode::Error::TypeMismatch(_) => FromBytesError::TypeMismatch(err),
+            decode::Error::InvalidMarkerRead(err) => {
+                FromBytesError::InvalidMarkerRead(err)
+            }
+            decode::Error::InvalidDataRead(err) => {
+                FromBytesError::InvalidDataRead(err)
+            }
+            err @ decode::Error::TypeMismatch(_) => {
+                FromBytesError::TypeMismatch(err)
+            }
             decode::Error::OutOfRange => FromBytesError::OutOfRange,
-            decode::Error::LengthMismatch(v) => FromBytesError::LengthMismatch(v),
+            decode::Error::LengthMismatch(v) => {
+                FromBytesError::LengthMismatch(v)
+            }
             decode::Error::Uncategorized(v) => FromBytesError::Uncategorized(v),
             decode::Error::Syntax(v) => FromBytesError::Syntax(v),
             decode::Error::Utf8Error(utferr) => {
                 let invalid_byte = utferr.valid_up_to();
                 FromBytesError::Utf8Error(invalid_byte)
-            },
-            decode::Error::DepthLimitExceeded => FromBytesError::DepthLimitExceeded,
+            }
+            decode::Error::DepthLimitExceeded => {
+                FromBytesError::DepthLimitExceeded
+            }
         }
     }
 }
 
-
 // TODO: should this have unit tests?
 impl<E> From<FromBytesError<E>> for io::Error
-    where E: Fail
+where
+    E: Fail,
 {
-    fn from(e: FromBytesError<E>) -> io::Error {
+    fn from(e: FromBytesError<E>) -> io::Error
+    {
         let (kind, errmsg) = match e {
             FromBytesError::InvalidMarkerRead(ioerr) => return ioerr,
             FromBytesError::InvalidDataRead(ioerr) => return ioerr,
 
-            err @ FromBytesError::Uncategorized(_) |
-            err @ FromBytesError::DepthLimitExceeded => {
+            err @ FromBytesError::Uncategorized(_)
+            | err @ FromBytesError::DepthLimitExceeded => {
                 (io::ErrorKind::Other, err.to_string())
             }
 
-            err => {
-                (io::ErrorKind::InvalidData, err.to_string())
-            }
+            err => (io::ErrorKind::InvalidData, err.to_string()),
         };
         io::Error::new(kind, errmsg)
     }
 }
 
-
 pub trait FromBytes<T, E>
-    where
-        T: RpcMessage,
-        E: Fail + From<ToMessageError>,
+where
+    T: RpcMessage,
+    E: Fail + From<ToMessageError>,
 {
     fn from_bytes(&mut BytesMut) -> Result<Option<T>, FromBytesError<E>>;
 }
 
-
 impl<T, E> FromBytes<T, E> for T
-    where T: RpcMessage<Err = E> + FromMessage<Value, Err = E>,
-          E: Fail + From<ToMessageError>,
+where
+    T: RpcMessage<Err = E> + FromMessage<Value, Err = E>,
+    E: Fail + From<ToMessageError>,
 {
-    fn from_bytes(buf: &mut BytesMut) -> Result<Option<T>, FromBytesError<E>> {
+    fn from_bytes(buf: &mut BytesMut) -> Result<Option<T>, FromBytesError<E>>
+    {
         let result;
         let curpos: usize;
 
@@ -524,11 +521,9 @@ impl<T, E> FromBytes<T, E> for T
     }
 }
 
-
 // ===========================================================================
 // Message
 // ===========================================================================
-
 
 // Message errors
 #[derive(Debug, Fail)]
@@ -540,9 +535,9 @@ pub enum ToMessageError
     #[fail(display = "Invalid message type")]
     InvalidType(#[cause] CheckIntError),
 
-    #[fail(display = "expected array but got {}", _0)] NotArray(String),
+    #[fail(display = "expected array but got {}", _0)]
+    NotArray(String),
 }
-
 
 /// The [`Message`] type is the core underlying type of all RPC messages
 ///
@@ -557,8 +552,8 @@ pub struct Message
     msg: Value,
 }
 
-
-impl FromMessage<Value> for Message {
+impl FromMessage<Value> for Message
+{
     type Err = ToMessageError;
 
     // TODO: improve call to check_int since it's possible the array's first
@@ -595,11 +590,10 @@ impl FromMessage<Value> for Message {
         // Return Message object
         Ok(Self { msg: val })
     }
-
 }
 
-
-impl FromMessage<Message> for Message {
+impl FromMessage<Message> for Message
+{
     type Err = ToMessageError;
 
     fn from_msg(msg: Message) -> Result<Self, Self::Err>
@@ -608,7 +602,6 @@ impl FromMessage<Message> for Message {
         Ok(ret)
     }
 }
-
 
 impl RpcMessage for Message
 {
@@ -624,7 +617,6 @@ impl RpcMessage for Message
         &self.msg
     }
 }
-
 
 // Clone impl
 impl Clone for Message
@@ -642,7 +634,6 @@ impl Clone for Message
     }
 }
 
-
 impl From<Message> for Value
 {
     fn from(msg: Message) -> Value
@@ -651,11 +642,9 @@ impl From<Message> for Value
     }
 }
 
-
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 // These unit tests require access to the private msg field of the Message
 // struct. The bulk of tests can be found in the test::core module.
@@ -724,7 +713,6 @@ mod tests
         assert_eq!(msg.as_value(), &expected);
     }
 }
-
 
 // ===========================================================================
 //
