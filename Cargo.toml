@@ -11,6 +11,7 @@ failure_derive = "0.1"
 
 # General deps
 bitflags = "1"
+chrono = "0.4"
 
 # MsgPack deps
 serde = "1.0"
