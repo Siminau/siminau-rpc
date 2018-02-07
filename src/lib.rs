@@ -19,7 +19,7 @@
 //! instead an integer. Since one goal in safesec is to ensure that all public
 //! interfaces have strict type and value validation, an integer that could be
 //! mapped to a C-style enum made better sense that using an arbitrary string.
-//!
+//! 
 //! [`msgpack-rpc`]: https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md
 
 // ===========================================================================
@@ -33,10 +33,11 @@
 #[macro_use]
 extern crate bitflags;
 extern crate bytes;
+extern crate chrono;
 
+extern crate failure;
 #[macro_use]
 extern crate failure_derive;
-extern crate failure;
 
 extern crate futures;
 extern crate tokio_core;
@@ -59,7 +60,6 @@ extern crate serde;
 #[macro_use]
 extern crate siminau_rpc_derive;
 
-
 // ===========================================================================
 // Modules
 // ===========================================================================
@@ -74,11 +74,9 @@ pub mod util;
 #[cfg(test)]
 mod test;
 
-
 // ===========================================================================
 // Exports
 // ===========================================================================
-
 
 // Enums
 
@@ -103,7 +101,6 @@ pub use self::core::request::RpcRequest;
 // Derive
 #[doc(hidden)]
 pub use siminau_rpc_derive::*;
-
 
 // ===========================================================================
 //

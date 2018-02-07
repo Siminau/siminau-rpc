@@ -10,6 +10,7 @@
 // Stdlib imports
 
 // Third-party imports
+use chrono::{DateTime, Utc};
 // use failure::Fail;
 
 // Local imports
@@ -18,6 +19,18 @@ use core::{CodeConvert, CodeValueError};
 // ===========================================================================
 // General message
 // ===========================================================================
+
+pub enum DataKind<'data>
+{
+    U8(u8),
+    U16(u16),
+    U32(u32),
+    U64(u64),
+    String(&'data str),
+    DateTime(&'data DateTime<Utc>),
+    List(Vec<DataKind<'data>>),
+    ByteList(&'data [u8]),
+}
 
 /// Enum defining different categories of messages
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
@@ -42,6 +55,9 @@ where
 
     /// Return the message's kind
     fn kind(&self) -> T;
+
+    /// Return the message's data payload
+    fn data(&self) -> DataKind;
 }
 
 pub trait IdentMessage<T>: Message<T>
