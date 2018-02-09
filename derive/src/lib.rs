@@ -3,10 +3,12 @@
 //
 // This file is released under the MIT License.
 
+// TODO: redo this to match syn 0.12 and quote 0.4
+
 // ===========================================================================
 // Externs
 // ===========================================================================
-#![recursion_limit="1024"]
+#![recursion_limit = "1024"]
 
 // Stdlib externs
 extern crate proc_macro;
@@ -21,11 +23,9 @@ extern crate quote;
 
 // Local externs
 
-
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 
@@ -37,11 +37,9 @@ use num::ToPrimitive;
 
 // Local imports
 
-
 // ===========================================================================
 //
 // ===========================================================================
-
 
 #[proc_macro_derive(CodeConvert)]
 pub fn code_convert(input: TokenStream) -> TokenStream
@@ -59,21 +57,21 @@ pub fn code_convert(input: TokenStream) -> TokenStream
     gen.parse().unwrap()
 }
 
-
-struct Literal<'a> {
+struct Literal<'a>
+{
     num: &'a syn::Lit,
 }
 
-
-impl<'a> From<&'a syn::Lit> for Literal<'a> {
+impl<'a> From<&'a syn::Lit> for Literal<'a>
+{
     fn from(num: &'a syn::Lit) -> Self
     {
         Self { num: num }
     }
 }
 
-
-impl<'a> ToPrimitive for Literal<'a> {
+impl<'a> ToPrimitive for Literal<'a>
+{
     fn to_i64(&self) -> Option<i64>
     {
         match self.num {
@@ -91,10 +89,9 @@ impl<'a> ToPrimitive for Literal<'a> {
     }
 }
 
-
 fn mk_code_impl(
     name: &syn::Ident, cases: &Vec<quote::Tokens>, int_type: syn::Ident,
-    maxnum: u64
+    maxnum: u64,
 ) -> quote::Tokens
 {
     quote! {
@@ -136,11 +133,9 @@ fn mk_code_impl(
     }
 }
 
-
 fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens
 {
     if let syn::Body::Enum(ref body) = ast.body {
-
         let name = &ast.ident;
         let mut num = 0;
         let mut maxnum: u64 = 0;
@@ -157,12 +152,10 @@ fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens
                         if let &syn::ConstExpr::Lit(ref l) = d {
                             let lit = Literal::from(l);
                             num = match lit.to_u64() {
-                                None => {
-                                    panic!(
-                                        "#[derive(CodeConvert)] only supports \
-                                         mapping to u64"
-                                    )
-                                }
+                                None => panic!(
+                                    "#[derive(CodeConvert)] only supports \
+                                     mapping to u64"
+                                ),
                                 Some(v) => v,
                             };
                         } else {
@@ -204,11 +197,9 @@ fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens
     }
 }
 
-
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 // #[cfg(test)]
 // mod tests {
@@ -216,7 +207,6 @@ fn impl_code_convert(ast: &syn::DeriveInput) -> quote::Tokens
 //     fn it_works() {
 //     }
 // }
-
 
 // ===========================================================================
 //
