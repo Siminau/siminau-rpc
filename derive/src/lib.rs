@@ -27,6 +27,7 @@ extern crate syn;
 
 mod codeconvert;
 mod datakind;
+mod from_message;
 
 // ===========================================================================
 // Imports
@@ -41,6 +42,7 @@ use syn::DeriveInput;
 // Local imports
 use codeconvert::impl_code_convert;
 use datakind::impl_is_datakind;
+use from_message::impl_from_message;
 
 // ===========================================================================
 // Helper
@@ -78,6 +80,16 @@ pub fn is_datakind(input: TokenStream) -> TokenStream
 pub fn code_convert(input: TokenStream) -> TokenStream
 {
     build_derive(input, impl_code_convert)
+}
+
+// ===========================================================================
+// FromMessage
+// ===========================================================================
+
+#[proc_macro_derive(FromMessage)]
+pub fn from_message(input: TokenStream) -> TokenStream
+{
+    build_derive(input, impl_from_message)
 }
 
 // ===========================================================================
