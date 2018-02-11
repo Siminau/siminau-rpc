@@ -7,6 +7,7 @@
 // Modules
 // ===========================================================================
 
+mod request;
 mod requestbuilder;
 mod responsebuilder;
 mod util;

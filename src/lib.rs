@@ -55,6 +55,9 @@ extern crate rmp_serde as rmps;
 extern crate rmpv;
 extern crate serde;
 
+#[macro_use]
+extern crate serde_derive;
+
 // Local externs
 
 #[macro_use]
