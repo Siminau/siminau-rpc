@@ -218,7 +218,7 @@ pub enum ResponseKind
 // Messages
 // ===========================================================================
 
-#[derive(Debug)]
+#[derive(Debug, FromMessage)]
 pub enum RequestMessage
 {
     // Auth init succeeded
@@ -258,7 +258,7 @@ pub enum RequestMessage
     WStat(request::WStatRequest),
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromMessage)]
 pub enum ResponseMessage
 {
     // Auth init succeeded

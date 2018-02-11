@@ -168,14 +168,14 @@ pub struct ErrorResponse
 // Message enum
 // ===========================================================================
 
-#[derive(Debug)]
+#[derive(Debug, FromMessage)]
 pub enum RequestMessage
 {
     VersionRequest(VersionRequest),
     V1(v1::RequestMessage),
 }
 
-#[derive(Debug)]
+#[derive(Debug, FromMessage)]
 pub enum ResponseMessage
 {
     VersionResponse(VersionResponse),
