@@ -69,6 +69,7 @@ extern crate siminau_rpc_derive;
 pub mod core;
 pub mod future;
 pub mod message;
+pub mod proto;
 pub mod util;
 
 #[cfg(test)]

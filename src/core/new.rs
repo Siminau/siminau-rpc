@@ -8,10 +8,12 @@
 // ===========================================================================
 
 // Stdlib imports
+use std::io;
 
 // Third-party imports
+use bytes::BytesMut;
 use chrono::{DateTime, Utc};
-// use failure::Fail;
+use failure::Fail;
 
 // Local imports
 
@@ -115,6 +117,89 @@ where
 {
     /// Return the message's ID value.
     fn id(&self) -> u32;
+}
+
+// ===========================================================================
+// Message conversion traits
+// ===========================================================================
+
+pub trait AsBytes<V, T>: Message<T>
+where
+    V: AsRef<[u8]>,
+    T: CodeConvert<T>,
+{
+    fn as_bytes(&self) -> V;
+}
+
+#[derive(Debug, Fail)]
+pub enum FromBytesError<E>
+where
+    E: Fail,
+{
+    #[fail(display = "decode error: invalid marker")]
+    InvalidMarkerRead(#[cause] io::Error),
+
+    #[fail(display = "decode error: invalid data")]
+    InvalidDataRead(#[cause] io::Error),
+
+    #[fail(display = "decode error: type mismatch")]
+    TypeMismatch,
+
+    #[fail(display = "decode error: value out of range")]
+    OutOfRange,
+
+    #[fail(display = "decode error: length mismatch {}", _0)]
+    LengthMismatch(u32),
+
+    #[fail(display = "decode error: {}", _0)]
+    Uncategorized(String),
+
+    #[fail(display = "decode syntax error: {}", _0)]
+    Syntax(String),
+
+    #[fail(display = "decode utf-8 error: invalid byte starts at {}", _0)]
+    Utf8Error(usize),
+
+    #[fail(display = "decode error: depth limit exceeded")]
+    DepthLimitExceeded,
+
+    #[fail(display = "Invalid message")]
+    InvalidMessage(#[cause] E),
+}
+
+pub trait FromBytes<M, T, E>: Message<T>
+where
+    M: Message<T>,
+    T: CodeConvert<T>,
+    E: Fail,
+{
+    fn from_bytes(&mut BytesMut) -> Result<Option<M>, FromBytesError<E>>;
+}
+
+// ===========================================================================
+// Trait implementations
+// ===========================================================================
+
+// TODO: should this have unit tests?
+impl<E> From<FromBytesError<E>> for io::Error
+where
+    E: Fail,
+{
+    fn from(e: FromBytesError<E>) -> io::Error
+    {
+        let (kind, errmsg) = match e {
+            FromBytesError::InvalidMarkerRead(ioerr) => return ioerr,
+            FromBytesError::InvalidDataRead(ioerr) => return ioerr,
+
+            err @ FromBytesError::Uncategorized(_)
+            | err @ FromBytesError::DepthLimitExceeded => {
+                (io::ErrorKind::Other, err.to_string())
+            }
+
+            err => (io::ErrorKind::InvalidData, err.to_string()),
+        };
+        io::Error::new(kind, errmsg)
+    }
 }
 
 // ===========================================================================
