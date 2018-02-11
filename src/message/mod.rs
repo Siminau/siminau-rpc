@@ -44,6 +44,13 @@ pub enum RequestCode
     Version = 2,
 }
 
+#[derive(Debug)]
+pub enum RequestKind
+{
+    General(RequestCode),
+    V1(v1::RequestCode),
+}
+
 // --------------------
 // Responses
 // --------------------
@@ -64,6 +71,17 @@ pub enum ResponseCode
     // 1. Protocol version number that will be used
     Version = 3,
 }
+
+#[derive(Debug)]
+pub enum ResponseKind
+{
+    General(ResponseCode),
+    V1(v1::ResponseCode),
+}
+
+// --------------------
+// Notifications
+// --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
 pub enum NotifyCode
