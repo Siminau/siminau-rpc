@@ -16,7 +16,7 @@ use rmps::decode;
 // Local imports
 use core::new::{CodeConvert, DataKind, FromBytesError, Message,
                 MessageCategory};
-use message::v1::request;
+use message;
 
 // ===========================================================================
 // Message conversion trait implementations
@@ -64,21 +64,20 @@ where
 // InitRequest
 // ===========================================================================
 
-pub struct InitRequest
+pub struct Request
 {
-    inner: request::InitRequest,
+    inner: message::RequestMessage,
 }
 
-impl<T> Message<T> for InitRequest
+impl<T> Message<T> for Request
 where
     T: CodeConvert<T>,
 {
     fn category(&self) -> MessageCategory
     {
-        MessageCategory::from_number(self.inner.category).unwrap()
+        unimplemented!();
     }
 
-    /// Return the message's kind
     fn kind(&self) -> T
     {
         unimplemented!();
