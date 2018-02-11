@@ -17,12 +17,6 @@
 //
 // ===========================================================================
 
-//#[derive(Debug, PartialEq, Clone, CodeConvert)]
-// pub enum RequestCode
-//{
-
-//}
-
 // category field should be used as a core::new::MessageCategory type
 // kind field should be used as a message::RequestCode type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -338,7 +332,26 @@ pub struct StatRequest
 // --------------------
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-pub struct WStatData {}
+pub struct WStatData
+{
+    // File attributes and permissions
+    // The high 8 bits are a copy of FileKind, and the other 24 bits are for
+    // permissions
+    pub mode: u32,
+
+    // last modified time
+    // date field
+    pub mtime: u32,
+
+    // length of file in bytes
+    pub length: u64,
+
+    // File name
+    pub name: String,
+
+    // Group name
+    pub gid: String,
+}
 
 // Change file attributes
 //
@@ -348,6 +361,14 @@ pub struct WStatData {}
 //
 // category field should be used as a core::new::MessageCategory type
 // kind field should be used as a message::v1::RequestCode type
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct WStatRequest
+{
+    id: u32,
+    category: u8,
+    kind: u8,
+    args: WStatData,
+}
 
 // ===========================================================================
 //
