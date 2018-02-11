@@ -7,16 +7,13 @@
 // Modules
 // ===========================================================================
 
-
 mod requestbuilder;
 mod responsebuilder;
 mod util;
 
-
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 
@@ -34,11 +31,9 @@ pub use self::responsebuilder::{response, BuildResponseError, ResponseBuilder};
 pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode,
                      OpenModeError};
 
-
 // ===========================================================================
 // Message codes
 // ===========================================================================
-
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
 pub enum RequestCode
@@ -135,7 +130,6 @@ pub enum RequestCode
     WStat = 26,
 }
 
-
 // --------------------
 // Responses
 // --------------------
@@ -218,17 +212,13 @@ pub enum ResponseCode
     WStat = 27,
 }
 
-
 // ===========================================================================
 // New types
 // ===========================================================================
 
-
 pub type Request = RequestMessage<RequestCode>;
 
-
 pub type Response = ResponseMessage<ResponseCode>;
-
 
 // ===========================================================================
 //

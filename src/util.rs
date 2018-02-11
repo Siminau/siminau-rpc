@@ -7,18 +7,15 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
 
 // Local imports
 
-
 // ===========================================================================
 // Miscellaneous utility functions
 // ===========================================================================
-
 
 // Return true if given string is not empty and is printable
 pub fn is_printable(s: &str, ws_printable: bool) -> bool
@@ -39,7 +36,6 @@ pub fn is_printable(s: &str, ws_printable: bool) -> bool
     });
     default || printable
 }
-
 
 // ===========================================================================
 //

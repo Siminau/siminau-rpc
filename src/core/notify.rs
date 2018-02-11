@@ -33,7 +33,7 @@
 //! the `NotificationMessage::new()` method
 //!
 //! ```text
-//!
+//! 
 //! extern crate rmpv;
 //!
 //! // `macro_use` needed to use CodeConvert custom derive
@@ -79,11 +79,10 @@
 //! # }
 //!
 //! ```
-//!
+//! 
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 
@@ -98,11 +97,9 @@ use rmpv::Value;
 use core::{check_int, value_type, CheckIntError, CodeConvert, FromMessage,
            Message, MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
-
 // ===========================================================================
 // NotificationMessage errors
 // ===========================================================================
-
 
 #[derive(Debug, Fail)]
 #[fail(display = "Expected notification message type value {}, got {}",
@@ -112,7 +109,6 @@ pub struct NoticeTypeError
     expected_type: u8,
     msgtype: u8,
 }
-
 
 #[derive(Debug, Fail)]
 pub enum NoticeCodeError
@@ -128,7 +124,6 @@ pub enum NoticeCodeError
     ToCode(u64),
 }
 
-
 #[derive(Debug, Fail)]
 #[fail(display = "Expected array for notification arguments but got {}",
        value_type)]
@@ -136,7 +131,6 @@ pub struct NoticeArgsError
 {
     value_type: String,
 }
-
 
 #[derive(Debug, Fail)]
 pub enum ToNoticeError
@@ -157,7 +151,6 @@ pub enum ToNoticeError
     MessageError(#[cause] ToMessageError),
 }
 
-
 impl From<ToMessageError> for ToNoticeError
 {
     fn from(e: ToMessageError) -> ToNoticeError
@@ -166,11 +159,9 @@ impl From<ToMessageError> for ToNoticeError
     }
 }
 
-
 // ===========================================================================
 // NotificationMessage
 // ===========================================================================
-
 
 /// Trait providing Notification message specific getter methods.
 ///
@@ -217,7 +208,6 @@ where
     }
 }
 
-
 /// A representation of the Notification RPC message type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NotificationMessage<C>
@@ -225,7 +215,6 @@ pub struct NotificationMessage<C>
     msg: Message,
     msgtype: PhantomData<C>,
 }
-
 
 impl<C> RpcMessage for NotificationMessage<C>
 where
@@ -244,7 +233,6 @@ where
     }
 }
 
-
 impl<C> RpcMessageType for NotificationMessage<C>
 where
     C: CodeConvert<C>,
@@ -255,13 +243,11 @@ where
     }
 }
 
-
 impl<C> RpcNotice<C> for NotificationMessage<C>
 where
     C: CodeConvert<C>,
 {
 }
-
 
 impl<C> NotificationMessage<C>
 where
@@ -367,10 +353,9 @@ where
     }
 }
 
-
 impl<C> FromMessage<Message> for NotificationMessage<C>
 where
-    C: CodeConvert<C>
+    C: CodeConvert<C>,
 {
     type Err = ToNoticeError;
 
@@ -442,7 +427,6 @@ where
     }
 }
 
-
 // Also implements Into<Message> for NotificationMessage
 impl<C> From<NotificationMessage<C>> for Message
 {
@@ -452,7 +436,6 @@ impl<C> From<NotificationMessage<C>> for Message
     }
 }
 
-
 // Also implements Into<Value> for NotificationMessage
 impl<C> From<NotificationMessage<C>> for Value
 {
@@ -461,7 +444,6 @@ impl<C> From<NotificationMessage<C>> for Value
         req.msg.into()
     }
 }
-
 
 // ===========================================================================
 //

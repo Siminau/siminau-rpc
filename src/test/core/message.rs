@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -21,11 +20,9 @@ use core::{value_type, FromMessage, Message, ToMessageError};
 // Helpers
 use super::TestEnum;
 
-
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 // If a non-Value::Array is stored then will always return an error
 #[test]
@@ -40,11 +37,9 @@ fn non_array_always_err()
     assert!(ret)
 }
 
-
 // ===========================================================================
 // Modules
 // ===========================================================================
-
 
 mod from
 {
@@ -155,7 +150,6 @@ mod from
     }
 }
 
-
 mod message_type
 {
     // std lib imports
@@ -193,8 +187,8 @@ mod message_type
     }
 }
 
-
-mod convert_bytes {
+mod convert_bytes
+{
 
     // Stdlib imports
 
@@ -210,13 +204,14 @@ mod convert_bytes {
 
     // Helpers
 
-    use test::core::decode;
     use super::TestEnum;
+    use test::core::decode;
 
     type Request = RequestMessage<TestEnum>;
 
     #[test]
-    fn serialize() {
+    fn serialize()
+    {
         // --------------------
         // GIVEN
         // a valid Message
@@ -247,7 +242,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize() {
+    fn deserialize()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -287,7 +283,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_nobytes() {
+    fn deserialize_nobytes()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -313,7 +310,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_incomplete_message() {
+    fn deserialize_incomplete_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -352,7 +350,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_invalid_message() {
+    fn deserialize_invalid_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -391,7 +390,6 @@ mod convert_bytes {
         assert!(val);
     }
 }
-
 
 // TODO: evaluate if need RpcMessage::value_type_name
 // mod value_type_name
@@ -460,7 +458,6 @@ mod convert_bytes {
 //         }
 //     }
 // }
-
 
 // ===========================================================================
 //

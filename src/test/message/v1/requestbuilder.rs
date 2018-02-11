@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -18,8 +17,8 @@
 // Tests
 // ===========================================================================
 
-
-mod auth {
+mod auth
+{
 
     // Third party imports
 
@@ -270,8 +269,8 @@ mod auth {
     }
 }
 
-
-mod flush {
+mod flush
+{
     // Third party imports
 
     // use failure::Fail;
@@ -361,8 +360,8 @@ mod flush {
     }
 }
 
-
-mod attach {
+mod attach
+{
     // Third party imports
 
     use failure::Fail;
@@ -691,8 +690,8 @@ mod attach {
     }
 }
 
-
-mod walk {
+mod walk
+{
     // Third party imports
 
     // use failure::Fail;
@@ -806,8 +805,8 @@ mod walk {
     }
 }
 
-
-mod open {
+mod open
+{
     // Third party imports
 
     // use failure::Fail;
@@ -867,8 +866,8 @@ mod open {
     }
 }
 
-
-mod create {
+mod create
+{
     // Third party imports
 
     use failure::Fail;
@@ -1007,8 +1006,8 @@ mod create {
     }
 }
 
-
-mod read {
+mod read
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1063,8 +1062,8 @@ mod read {
     }
 }
 
-
-mod write {
+mod write
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1244,8 +1243,8 @@ mod write {
     }
 }
 
-
-mod clunk {
+mod clunk
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1290,8 +1289,8 @@ mod clunk {
     }
 }
 
-
-mod remove {
+mod remove
+{
     // Third party imports
 
     use proptest::prelude::*;
@@ -1335,7 +1334,6 @@ mod remove {
         }
     }
 }
-
 
 // ===========================================================================
 //

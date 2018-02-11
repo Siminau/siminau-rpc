@@ -7,40 +7,35 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
-
 
 // Local imports
 
 use core::{CodeConvert, CodeValueError};
 use core::response::ResponseMessage;
 
-
 // ===========================================================================
 // Helpers
 // ===========================================================================
 
-
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-enum TestError {
+enum TestError
+{
     One,
     Two,
     Three,
 }
 
-
 type Response = ResponseMessage<TestError>;
-
 
 // ===========================================================================
 // Tests
 // ===========================================================================
 
-
-mod new {
+mod new
+{
     // Stdlib imports
 
     // Third-party imports
@@ -79,8 +74,8 @@ mod new {
     }
 }
 
-
-mod from {
+mod from
+{
     // Stdlib imports
 
     // Third-party imports
@@ -98,7 +93,8 @@ mod from {
     use super::{Response, TestError};
 
     #[test]
-    fn invalid_arraylen() {
+    fn invalid_arraylen()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -135,7 +131,8 @@ mod from {
     }
 
     #[test]
-    fn invalid_messagetype() {
+    fn invalid_messagetype()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -184,7 +181,8 @@ mod from {
     }
 
     #[test]
-    fn message_id_invalid_type() {
+    fn message_id_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -278,7 +276,8 @@ mod from {
     }
 
     #[test]
-    fn error_code_invalid_type() {
+    fn error_code_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -447,8 +446,8 @@ mod from {
     }
 }
 
-
-mod rpcmessage {
+mod rpcmessage
+{
     // Stdlib imports
 
     // Third-party imports
@@ -463,7 +462,8 @@ mod rpcmessage {
     use super::{Response, TestError};
 
     #[test]
-    fn as_vec() {
+    fn as_vec()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -495,7 +495,8 @@ mod rpcmessage {
     }
 
     #[test]
-    fn as_value() {
+    fn as_value()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -527,8 +528,8 @@ mod rpcmessage {
     }
 }
 
-
-mod rpcresponse {
+mod rpcresponse
+{
     // Stdlib imports
 
     // Third-party imports
@@ -544,7 +545,8 @@ mod rpcresponse {
     use super::{Response, TestError};
 
     #[test]
-    fn message_id() {
+    fn message_id()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -576,7 +578,8 @@ mod rpcresponse {
     }
 
     #[test]
-    fn result() {
+    fn result()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -608,7 +611,8 @@ mod rpcresponse {
     }
 }
 
-mod convert_bytes {
+mod convert_bytes
+{
     // Stdlib imports
 
     // Third-party imports
@@ -621,11 +625,12 @@ mod convert_bytes {
 
     // Helpers
 
-    use test::core::decode;
     use super::{Response, TestError};
+    use test::core::decode;
 
     #[test]
-    fn serialize() {
+    fn serialize()
+    {
         // --------------------
         // GIVEN
         // a valid ResponseMessage
@@ -648,7 +653,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize() {
+    fn deserialize()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -678,7 +684,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_nobytes() {
+    fn deserialize_nobytes()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -704,7 +711,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_incomplete_message() {
+    fn deserialize_incomplete_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -742,7 +750,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_invalid_message() {
+    fn deserialize_invalid_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and

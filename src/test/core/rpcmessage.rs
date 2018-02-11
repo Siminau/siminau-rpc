@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -22,11 +21,9 @@ use core::request::RequestMessage;
 // Helpers
 use super::TestEnum;
 
-
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 #[test]
 fn as_vec()
@@ -61,7 +58,6 @@ fn as_vec()
     assert_eq!(result, expected)
 }
 
-
 #[test]
 fn as_value()
 {
@@ -94,7 +90,6 @@ fn as_value()
     let expected = expected.as_value();
     assert_eq!(result, expected)
 }
-
 
 // ===========================================================================
 //

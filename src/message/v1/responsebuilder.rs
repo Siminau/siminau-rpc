@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -56,21 +55,21 @@ pub enum BuildResponseError
            _0)]
     Attach(u8),
 
-    #[fail(display = "Unable to build walk response message: item {} \
-                      of path_id has invalid kind {}",
+    #[fail(display = "Unable to build walk response message: item {} of \
+                      path_id has invalid kind {}",
            index, kind)]
     Walk
     {
         index: usize, kind: u8
     },
 
-    #[fail(display = "Unable to build open response message: file \
-                      id has invalid kind {}",
+    #[fail(display = "Unable to build open response message: file id has \
+                      invalid kind {}",
            _0)]
     Open(u8),
 
-    #[fail(display = "Unable to build create response message: file \
-                      id has invalid kind {}",
+    #[fail(display = "Unable to build create response message: file id has \
+                      invalid kind {}",
            _0)]
     Create(u8),
 
@@ -79,7 +78,6 @@ pub enum BuildResponseError
            _0, _1)]
     Read(u32, usize),
 }
-
 
 impl BuildResponseError
 {
@@ -92,17 +90,14 @@ impl BuildResponseError
     }
 }
 
-
 // ===========================================================================
 // Response builder
 // ===========================================================================
-
 
 pub trait ProtocolResponse
 {
     fn as_fileid(&self) -> Option<FileID>;
 }
-
 
 impl ProtocolResponse for Response
 {
@@ -148,13 +143,11 @@ impl ProtocolResponse for Response
     }
 }
 
-
 enum OpenOrCreate
 {
     Open,
     Create,
 }
-
 
 impl OpenOrCreate
 {
@@ -167,12 +160,10 @@ impl OpenOrCreate
     }
 }
 
-
 pub struct ResponseBuilder<'request>
 {
     request: &'request Request,
 }
-
 
 impl<'request> ResponseBuilder<'request>
 {
@@ -468,12 +459,10 @@ impl<'request> ResponseBuilder<'request>
     // }
 }
 
-
 pub fn response(request: &Request) -> ResponseBuilder
 {
     ResponseBuilder::new(request)
 }
-
 
 // ===========================================================================
 //

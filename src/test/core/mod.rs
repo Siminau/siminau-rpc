@@ -7,7 +7,6 @@
 // Modules
 // ===========================================================================
 
-
 mod check_int;
 mod message;
 mod messagetype;
@@ -16,11 +15,9 @@ mod request;
 mod response;
 mod rpcmessage;
 
-
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 use std::io;
@@ -34,11 +31,9 @@ use serde::Deserialize;
 // Local imports
 use core::{CodeConvert, CodeValueError};
 
-
 // ===========================================================================
 // Helpers
 // ===========================================================================
-
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
 enum TestEnum
@@ -48,9 +43,9 @@ enum TestEnum
     Three,
 }
 
-
 // Helper
-fn decode(buf: &mut BytesMut) -> Result<Value, decode::Error> {
+fn decode(buf: &mut BytesMut) -> Result<Value, decode::Error>
+{
     let result;
     let curpos: usize;
 
@@ -73,7 +68,6 @@ fn decode(buf: &mut BytesMut) -> Result<Value, decode::Error> {
     // Return result
     result
 }
-
 
 // ===========================================================================
 //

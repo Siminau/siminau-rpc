@@ -1,28 +1,27 @@
-// src/test/message/v1/mod.rs
-// Copyright (C) 2017 authors and contributors (see AUTHORS file)
+// src/core/newrequest.rs
+// Copyright (C) 2018 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
 
 // ===========================================================================
-// Modules
+// Externs
 // ===========================================================================
 
-mod requestbuilder;
-mod responsebuilder;
-mod util;
+// Stdlib externs
+
+// Third-party externs
+
+// Local externs
 
 // ===========================================================================
-// Helpers
+// Imports
 // ===========================================================================
 
-fn invalid_string(s: &str) -> bool
-{
-    if s.is_empty() {
-        true
-    } else {
-        s.chars().any(|c| c.is_whitespace() || c.is_control())
-    }
-}
+// Stdlib imports
+
+// Third-party imports
+
+// Local imports
 
 // ===========================================================================
 //

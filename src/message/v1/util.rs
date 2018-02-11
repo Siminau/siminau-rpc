@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -20,7 +19,6 @@ use core::{CodeConvert, CodeValueError};
 // Server File ID
 // ===========================================================================
 
-
 bitflags! {
     pub struct FileKind: u8 {
         const DIR =     0b10000000;
@@ -31,7 +29,6 @@ bitflags! {
         const FILE =    0b00000000;
     }
 }
-
 
 impl FileKind
 {
@@ -47,7 +44,6 @@ impl FileKind
     }
 }
 
-
 #[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub struct FileID
 {
@@ -55,7 +51,6 @@ pub struct FileID
     pub version: u32,
     pub path: u64,
 }
-
 
 impl FileID
 {
@@ -74,7 +69,6 @@ impl FileID
     }
 }
 
-
 impl Default for FileID
 {
     fn default() -> FileID
@@ -83,11 +77,9 @@ impl Default for FileID
     }
 }
 
-
 // ===========================================================================
 // File open mode
 // ===========================================================================
-
 
 bitflags! {
     pub struct OpenFlag: u8 {
@@ -96,7 +88,6 @@ bitflags! {
         const ONOFLAG = 0b00000000;
     }
 }
-
 
 #[derive(Debug, PartialEq, Copy, Clone, CodeConvert)]
 pub enum OpenKind
@@ -107,13 +98,11 @@ pub enum OpenKind
     Execute = 3,
 }
 
-
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct OpenMode
 {
     mode: u8,
 }
-
 
 #[derive(Debug, Fail)]
 #[fail(display = "Invalid bits set: {:b}", bits)]
@@ -121,7 +110,6 @@ pub struct OpenModeError
 {
     bits: u8,
 }
-
 
 impl OpenMode
 {
@@ -209,7 +197,6 @@ impl OpenMode
     }
 }
 
-
 impl Default for OpenMode
 {
     fn default() -> OpenMode
@@ -218,12 +205,10 @@ impl Default for OpenMode
     }
 }
 
-
 pub struct OpenModeBuilder
 {
     open_mode: OpenMode,
 }
-
 
 impl Default for OpenModeBuilder
 {
@@ -234,7 +219,6 @@ impl Default for OpenModeBuilder
         }
     }
 }
-
 
 impl OpenModeBuilder
 {
@@ -256,12 +240,10 @@ impl OpenModeBuilder
     }
 }
 
-
 pub fn openmode() -> OpenModeBuilder
 {
     OpenModeBuilder::default()
 }
-
 
 // ===========================================================================
 //

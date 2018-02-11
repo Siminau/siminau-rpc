@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -21,11 +20,9 @@ use util::is_printable;
 // Parent-module imports
 use super::{OpenMode, Request, RequestCode};
 
-
 // ===========================================================================
 // Helper
 // ===========================================================================
-
 
 #[derive(Debug, Fail)]
 pub enum CheckNameError
@@ -38,7 +35,6 @@ pub enum CheckNameError
            _0)]
     WSNotPrintable(String),
 }
-
 
 fn check_name(
     var: &str, name: &str, ws_printable: bool
@@ -57,23 +53,21 @@ fn check_name(
     Ok(())
 }
 
-
 // ===========================================================================
 // Request builder errors
 // ===========================================================================
 
-
 #[derive(Debug, Fail)]
 pub enum BuildAttachError
 {
-    #[fail(display = "Name error: {}", _0)] NameError(#[cause] CheckNameError),
+    #[fail(display = "Name error: {}", _0)]
+    NameError(#[cause] CheckNameError),
 
     #[fail(display = "Invalid rootdir_id value ({}): rootdir_id matches \
                       authfile_id",
            _0)]
     MatchingID(u32),
 }
-
 
 #[derive(Debug, Fail)]
 pub enum BuildRequestError
@@ -97,23 +91,20 @@ pub enum BuildRequestError
     #[fail(display = "Unable to build create request message")]
     Create(#[cause] CheckNameError),
 
-    #[fail(display = "Unable to build create request message: bytes to write \
-                      ({}) does not match write count ({})",
+    #[fail(display = "Unable to build create request message: bytes to \
+                      write ({}) does not match write count ({})",
            _0, _1)]
     Write(u32, usize),
 }
-
 
 // ===========================================================================
 // Request builder
 // ===========================================================================
 
-
 pub struct RequestBuilder
 {
     id: u32,
 }
-
 
 impl RequestBuilder
 {
@@ -352,12 +343,10 @@ impl RequestBuilder
     }
 }
 
-
 pub fn request(msgid: u32) -> RequestBuilder
 {
     RequestBuilder::new(msgid)
 }
-
 
 // ===========================================================================
 //

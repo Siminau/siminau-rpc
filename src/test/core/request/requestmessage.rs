@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -18,11 +17,9 @@
 
 use super::TestEnum;
 
-
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 mod new
 {
@@ -69,7 +66,6 @@ mod new
         }
     }
 }
-
 
 mod from
 {
@@ -506,8 +502,8 @@ mod from
     }
 }
 
-
-mod convert_bytes {
+mod convert_bytes
+{
     // Stdlib imports
 
     // Third-party imports
@@ -526,7 +522,8 @@ mod convert_bytes {
     type Request = RequestMessage<TestEnum>;
 
     #[test]
-    fn serialize() {
+    fn serialize()
+    {
         // --------------------
         // GIVEN
         // a valid RequestMessage
@@ -550,7 +547,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize() {
+    fn deserialize()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -579,9 +577,9 @@ mod convert_bytes {
         }
     }
 
-
     #[test]
-    fn deserialize_nobytes() {
+    fn deserialize_nobytes()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -607,7 +605,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_incomplete_message() {
+    fn deserialize_incomplete_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -645,7 +644,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_invalid_message() {
+    fn deserialize_invalid_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -683,7 +683,6 @@ mod convert_bytes {
         assert!(val);
     }
 }
-
 
 // ===========================================================================
 //

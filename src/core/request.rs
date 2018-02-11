@@ -86,11 +86,10 @@
 //! # }
 //!
 //! ```
-//!
+//! 
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 
@@ -105,11 +104,9 @@ use rmpv::Value;
 use core::{check_int, value_type, CheckIntError, CodeConvert, FromMessage,
            Message, MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
-
 // ===========================================================================
 // RequestMessage errors
 // ===========================================================================
-
 
 #[derive(Debug, Fail)]
 #[fail(display = "expected request message type value {}, got {}",
@@ -120,14 +117,13 @@ pub struct RequestTypeError
     msgtype: u8,
 }
 
-
 #[derive(Debug, Fail)]
 #[fail(display = "Invalid request message id")]
 pub struct RequestIDError
 {
-    #[cause] err: CheckIntError,
+    #[cause]
+    err: CheckIntError,
 }
-
 
 #[derive(Debug, Fail)]
 pub enum RequestCodeError
@@ -142,14 +138,12 @@ pub enum RequestCodeError
     ToCode(u64),
 }
 
-
 #[derive(Debug, Fail)]
 #[fail(display = "Expected array for request arguments but got {}", value_type)]
 pub struct RequestArgsError
 {
     value_type: String,
 }
-
 
 #[derive(Debug, Fail)]
 pub enum ToRequestError
@@ -173,7 +167,6 @@ pub enum ToRequestError
     MessageError(#[cause] ToMessageError),
 }
 
-
 impl From<ToMessageError> for ToRequestError
 {
     fn from(e: ToMessageError) -> ToRequestError
@@ -182,11 +175,9 @@ impl From<ToMessageError> for ToRequestError
     }
 }
 
-
 // ===========================================================================
 // RequestMessage
 // ===========================================================================
-
 
 /// Trait providing Request message specific getter methods.
 ///
@@ -243,7 +234,6 @@ where
     }
 }
 
-
 /// A representation of the Request RPC message type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RequestMessage<C>
@@ -251,7 +241,6 @@ pub struct RequestMessage<C>
     msg: Message,
     codetype: PhantomData<C>,
 }
-
 
 impl<C> RpcMessage for RequestMessage<C>
 where
@@ -270,7 +259,6 @@ where
     }
 }
 
-
 impl<C> RpcMessageType for RequestMessage<C>
 where
     C: CodeConvert<C>,
@@ -281,13 +269,11 @@ where
     }
 }
 
-
 impl<C> RpcRequest<C> for RequestMessage<C>
 where
     C: CodeConvert<C>,
 {
 }
-
 
 impl<C> RequestMessage<C>
 where
@@ -401,7 +387,6 @@ where
     }
 }
 
-
 /// Create a RequestMessage from a Message
 ///
 /// # Errors
@@ -446,7 +431,7 @@ where
 /// ```
 impl<C> FromMessage<Message> for RequestMessage<C>
 where
-    C: CodeConvert<C>
+    C: CodeConvert<C>,
 {
     type Err = ToRequestError;
 
@@ -483,7 +468,6 @@ where
     }
 }
 
-
 // Also implements Into<Message> for RequestMessage
 impl<C> From<RequestMessage<C>> for Message
 {
@@ -493,7 +477,6 @@ impl<C> From<RequestMessage<C>> for Message
     }
 }
 
-
 // Also implements Into<Value> for RequestMessage
 impl<C> From<RequestMessage<C>> for Value
 {
@@ -502,7 +485,6 @@ impl<C> From<RequestMessage<C>> for Value
         req.msg.into()
     }
 }
-
 
 // ===========================================================================
 //

@@ -34,7 +34,7 @@
 //! `ResponseMessage::new()` method
 //!
 //! ```rust
-//!
+//! 
 //! extern crate rmpv;
 //!
 //! // `macro_use` needed to use CodeConvert custom derive
@@ -83,11 +83,10 @@
 //! # }
 //!
 //! ```
-//!
+//! 
 // ===========================================================================
 // Imports
 // ===========================================================================
-
 
 // Stdlib imports
 
@@ -102,11 +101,9 @@ use rmpv::Value;
 use core::{check_int, CheckIntError, CodeConvert, FromMessage, Message,
            MessageType, RpcMessage, RpcMessageType, ToMessageError};
 
-
 // ===========================================================================
 // ResponseMessage errors
 // ===========================================================================
-
 
 #[derive(Debug, Fail)]
 #[fail(display = "Expected response message type value {}, got {}",
@@ -117,14 +114,13 @@ pub struct ResponseTypeError
     msgtype: u8,
 }
 
-
 #[derive(Debug, Fail)]
 #[fail(display = "Invalid response message id")]
 pub struct ResponseIDError
 {
-    #[cause] err: CheckIntError,
+    #[cause]
+    err: CheckIntError,
 }
-
 
 #[derive(Debug, Fail)]
 pub enum ResponseCodeError
@@ -138,7 +134,6 @@ pub enum ResponseCodeError
     #[fail(display = "Cannot convert method value {} into response code", _0)]
     ToCode(u64),
 }
-
 
 #[derive(Debug, Fail)]
 pub enum ToResponseError
@@ -159,7 +154,6 @@ pub enum ToResponseError
     MessageError(#[cause] ToMessageError),
 }
 
-
 impl From<ToMessageError> for ToResponseError
 {
     fn from(e: ToMessageError) -> ToResponseError
@@ -168,11 +162,9 @@ impl From<ToMessageError> for ToResponseError
     }
 }
 
-
 // ===========================================================================
 // ResponseMessage
 // ===========================================================================
-
 
 /// Trait providing Response message specific getter methods.
 ///
@@ -226,7 +218,6 @@ where
     }
 }
 
-
 /// A representation of the Response RPC message type.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResponseMessage<C>
@@ -234,7 +225,6 @@ pub struct ResponseMessage<C>
     msg: Message,
     msgtype: PhantomData<C>,
 }
-
 
 impl<C> RpcMessage for ResponseMessage<C>
 where
@@ -253,7 +243,6 @@ where
     }
 }
 
-
 impl<C> RpcMessageType for ResponseMessage<C>
 where
     C: CodeConvert<C>,
@@ -264,13 +253,11 @@ where
     }
 }
 
-
 impl<C> RpcResponse<C> for ResponseMessage<C>
 where
     C: CodeConvert<C>,
 {
 }
-
 
 impl<C> ResponseMessage<C>
 where
@@ -366,10 +353,9 @@ where
     }
 }
 
-
 impl<C> FromMessage<Message> for ResponseMessage<C>
 where
-    C: CodeConvert<C>
+    C: CodeConvert<C>,
 {
     type Err = ToResponseError;
 
@@ -444,7 +430,6 @@ where
     }
 }
 
-
 // Also implements Into<Message> for ResponseMessage
 impl<C> From<ResponseMessage<C>> for Message
 {
@@ -454,7 +439,6 @@ impl<C> From<ResponseMessage<C>> for Message
     }
 }
 
-
 // Also implements Into<Value> for ResponseMessage
 impl<C> From<ResponseMessage<C>> for Value
 {
@@ -463,7 +447,6 @@ impl<C> From<ResponseMessage<C>> for Value
         req.msg.into()
     }
 }
-
 
 // ===========================================================================
 //

@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -21,11 +20,9 @@ use core::request::{RequestMessage, RpcRequest};
 // Helpers
 use super::TestEnum;
 
-
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 #[test]
 fn message_id()
@@ -59,7 +56,6 @@ fn message_id()
     let expected = expected.as_vec()[1].as_u64().unwrap() as u32;
     assert_eq!(result, expected)
 }
-
 
 #[test]
 fn message_method()
@@ -95,7 +91,6 @@ fn message_method()
     assert_eq!(result, expected)
 }
 
-
 #[test]
 fn message_args()
 {
@@ -128,7 +123,6 @@ fn message_args()
     let expected = expected.as_vec()[3].as_array().unwrap();
     assert_eq!(result, expected)
 }
-
 
 // ===========================================================================
 //

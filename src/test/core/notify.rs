@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -16,29 +15,26 @@
 use core::{CodeConvert, CodeValueError};
 use core::notify::NotificationMessage;
 
-
 // ===========================================================================
 // Helpers
 // ===========================================================================
 
-
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-enum TestCode {
+enum TestCode
+{
     One,
     Two,
     Three,
 }
 
-
 type Notice = NotificationMessage<TestCode>;
-
 
 // ===========================================================================
 // Tests
 // ===========================================================================
 
-
-mod new {
+mod new
+{
     // Stdlib imports
 
     // Third-party imports
@@ -79,8 +75,8 @@ mod new {
     }
 }
 
-
-mod from {
+mod from
+{
     // Stdlib imports
 
     // Third-party imports
@@ -98,7 +94,8 @@ mod from {
     use super::{Notice, TestCode};
 
     #[test]
-    fn invalid_arraylen() {
+    fn invalid_arraylen()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -135,7 +132,8 @@ mod from {
     }
 
     #[test]
-    fn invalid_messagetype() {
+    fn invalid_messagetype()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -180,7 +178,8 @@ mod from {
     }
 
     #[test]
-    fn message_code_invalid_type() {
+    fn message_code_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -362,7 +361,8 @@ mod from {
     }
 
     #[test]
-    fn message_args_invalid_type() {
+    fn message_args_invalid_type()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -409,8 +409,8 @@ mod from {
     }
 }
 
-
-mod rpcmessage {
+mod rpcmessage
+{
     // Stdlib imports
 
     // Third-party imports
@@ -425,7 +425,8 @@ mod rpcmessage {
     use super::{Notice, TestCode};
 
     #[test]
-    fn as_vec() {
+    fn as_vec()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -456,7 +457,8 @@ mod rpcmessage {
     }
 
     #[test]
-    fn as_value() {
+    fn as_value()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -488,8 +490,8 @@ mod rpcmessage {
 
 }
 
-
-mod rpcnotice {
+mod rpcnotice
+{
     // Stdlib imports
 
     // Third-party imports
@@ -505,7 +507,8 @@ mod rpcnotice {
     use super::{Notice, TestCode};
 
     #[test]
-    fn message_code() {
+    fn message_code()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -537,7 +540,8 @@ mod rpcnotice {
     }
 
     #[test]
-    fn message_args() {
+    fn message_args()
+    {
         // --------------------
         // GIVEN
         // --------------------
@@ -568,8 +572,8 @@ mod rpcnotice {
     }
 }
 
-
-mod convert_bytes {
+mod convert_bytes
+{
     // Stdlib imports
 
     // Third-party imports
@@ -582,11 +586,12 @@ mod convert_bytes {
 
     // Helpers
 
-    use test::core::decode;
     use super::{Notice, TestCode};
+    use test::core::decode;
 
     #[test]
-    fn serialize() {
+    fn serialize()
+    {
         // --------------------
         // GIVEN
         // a valid NotificationMessage
@@ -610,7 +615,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize() {
+    fn deserialize()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -639,9 +645,9 @@ mod convert_bytes {
         }
     }
 
-
     #[test]
-    fn deserialize_nobytes() {
+    fn deserialize_nobytes()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -667,7 +673,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_incomplete_message() {
+    fn deserialize_incomplete_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and
@@ -705,7 +712,8 @@ mod convert_bytes {
     }
 
     #[test]
-    fn deserialize_invalid_message() {
+    fn deserialize_invalid_message()
+    {
         // --------------------
         // GIVEN
         // an empty BytesMut buffer and

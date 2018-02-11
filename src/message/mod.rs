@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 // Third-party imports
@@ -21,14 +20,11 @@ use core::notify::NotificationMessage;
 use core::request::{RequestMessage, RpcRequest};
 use core::response::ResponseMessage;
 
-
 // ===========================================================================
 // Modules
 // ===========================================================================
 
-
 pub mod v1;
-
 
 // ===========================================================================
 // Message codes
@@ -39,7 +35,8 @@ pub mod v1;
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum RequestCode {
+pub enum RequestCode
+{
     // Initiate client session by requesting an API version
     //
     // Single argument:
@@ -47,13 +44,13 @@ pub enum RequestCode {
     Version = 2,
 }
 
-
 // --------------------
 // Responses
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum ResponseCode {
+pub enum ResponseCode
+{
     // Any error that is generated in response to a request.
     //
     // Single argument:
@@ -68,41 +65,36 @@ pub enum ResponseCode {
     Version = 3,
 }
 
-
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum NotifyCode {
+pub enum NotifyCode
+{
     // No more requests will be made
     //
     // No arguments
     Done = 0,
 }
 
-
 // ===========================================================================
 // New types
 // ===========================================================================
 
-
 pub type Request = RequestMessage<RequestCode>;
-
 
 pub type Response = ResponseMessage<ResponseCode>;
 
-
 pub type Info = NotificationMessage<NotifyCode>;
-
 
 // ===========================================================================
 // Request builder
 // ===========================================================================
 
-
-pub struct RequestBuilder {
+pub struct RequestBuilder
+{
     id: u32,
 }
 
-
-impl RequestBuilder {
+impl RequestBuilder
+{
     pub fn new(msgid: u32) -> RequestBuilder
     {
         RequestBuilder { id: msgid }
@@ -115,24 +107,22 @@ impl RequestBuilder {
     }
 }
 
-
 pub fn request(msgid: u32) -> RequestBuilder
 {
     RequestBuilder::new(msgid)
 }
 
-
 // ===========================================================================
 // Response builder
 // ===========================================================================
 
-
-pub struct ResponseBuilder<'request> {
+pub struct ResponseBuilder<'request>
+{
     request: &'request Request,
 }
 
-
-impl<'request> ResponseBuilder<'request> {
+impl<'request> ResponseBuilder<'request>
+{
     pub fn new(request: &'request Request) -> ResponseBuilder
     {
         ResponseBuilder { request: request }
@@ -160,22 +150,19 @@ impl<'request> ResponseBuilder<'request> {
     }
 }
 
-
 pub fn response(request: &Request) -> ResponseBuilder
 {
     ResponseBuilder::new(request)
 }
 
-
 // ===========================================================================
 // Info builder
 // ===========================================================================
 
-
 pub struct InfoBuilder;
 
-
-impl InfoBuilder {
+impl InfoBuilder
+{
     pub fn new() -> InfoBuilder
     {
         InfoBuilder
@@ -187,13 +174,10 @@ impl InfoBuilder {
     }
 }
 
-
 pub fn info() -> InfoBuilder
 {
     InfoBuilder::new()
 }
-
-
 
 // ===========================================================================
 //

@@ -7,7 +7,6 @@
 // Imports
 // ===========================================================================
 
-
 // Stdlib imports
 
 use std::io;
@@ -20,24 +19,26 @@ use tokio_io::AsyncRead;
 
 // Local imports
 
-
 // ===========================================================================
 //
 // ===========================================================================
 
-
 #[derive(Debug)]
-enum ReadToBlockState<A> {
-    Reading { a: A, buf: Vec<u8> },
+enum ReadToBlockState<A>
+{
+    Reading
+    {
+        a: A,
+        buf: Vec<u8>,
+    },
     Empty,
 }
 
-
 #[derive(Debug)]
-pub struct ReadToBlock<A> {
+pub struct ReadToBlock<A>
+{
     state: ReadToBlockState<A>,
 }
-
 
 /// Creates a future which will read all the bytes associated with the I/O
 /// object `A` into the buffer provided until either the read operation will
@@ -50,9 +51,10 @@ pub fn read_to_block<A>(a: A, buf: Vec<u8>) -> ReadToBlock<A>
 where
     A: AsyncRead,
 {
-    ReadToBlock { state: ReadToBlockState::Reading { a: a, buf: buf } }
+    ReadToBlock {
+        state: ReadToBlockState::Reading { a: a, buf: buf },
+    }
 }
-
 
 impl<A> Future for ReadToBlock<A>
 where
@@ -98,7 +100,6 @@ where
         }
     }
 }
-
 
 // ===========================================================================
 //
