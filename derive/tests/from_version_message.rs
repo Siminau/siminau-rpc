@@ -38,9 +38,9 @@ fn derive_from_version_message()
         pub mod message
         {
             #[derive(FromMessage)]
-            pub enum RequestMessage
+            pub enum Hello
             {
-                Hello(helloworld::Hello),
+                World(helloworld::Hello),
             }
 
             pub mod helloworld

@@ -30,16 +30,16 @@ fn process_enum_variants(enum_name: &Ident, enumdef: &DataEnum)
             let field = match var.fields {
                 Fields::Unit | Fields::Named(_) => {
                     panic!(
-                        "#[derive(FromVersionMessage)] currently does not support \
-                         unit or struct variants"
+                        "#[derive(FromVersionMessage)] currently does not \
+                         support unit or struct variants"
                     );
                 }
                 Fields::Unnamed(ref f) => {
                     if f.unnamed.len() != 1 {
                         panic!(
-                            "#[derive(FromVersionMessage)] does not support empty \
-                             tuple variants or tuple variants with more than \
-                             1 field"
+                            "#[derive(FromVersionMessage)] does not support \
+                             empty tuple variants or tuple variants with more \
+                             than 1 field"
                         );
                     }
 
@@ -49,12 +49,12 @@ fn process_enum_variants(enum_name: &Ident, enumdef: &DataEnum)
 
             let field_type = &field.ty;
             quote! {
-                impl From<#field_type> for message::RequestMessage
+                impl From<#field_type> for message::#enum_name
                 {
-                    fn from(m: #field_type) -> message::RequestMessage
+                    fn from(m: #field_type) -> message::#enum_name
                     {
                         let vmsg = #enum_name::from(m);
-                        message::RequestMessage::from(vmsg)
+                        message::#enum_name::from(vmsg)
                     }
                 }
             }

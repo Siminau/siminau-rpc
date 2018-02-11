@@ -98,7 +98,9 @@ pub fn from_message(input: TokenStream) -> TokenStream
 // FromVersionMessage
 // ===========================================================================
 
-// This depends on simianu_rpc::message being available
+// This depends on a module `message` being available at the time the custom
+// derive is run, and also that a public type exists in `message` with the same
+// name as the enum the custom derive is processing
 #[proc_macro_derive(FromVersionMessage)]
 pub fn from_version_message(input: TokenStream) -> TokenStream
 {
