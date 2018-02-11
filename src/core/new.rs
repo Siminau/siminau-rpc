@@ -20,18 +20,7 @@ use core::{CodeConvert, CodeValueError};
 // General message
 // ===========================================================================
 
-// trait IsDataKind
-// {
-//     fn is_u8(&self) -> bool;
-//     fn is_u16(&self) -> bool;
-//     fn is_u32(&self) -> bool;
-//     fn is_u64(&self) -> bool;
-//     fn is_string(&self) -> bool;
-//     fn is_datetime(&self) -> bool;
-//     fn is_list(&self) -> bool;
-//     fn is_bytelist(&self) -> bool;
-// }
-
+#[derive(Debug, PartialEq, Clone, IsDataKind)]
 pub enum DataKind<'data>
 {
     U8(u8),
@@ -72,7 +61,7 @@ where
     fn data(&self) -> DataKind;
 }
 
-pub trait IdentMessage<T>: Message<T>
+pub trait IdMessage<T>: Message<T>
 where
     T: CodeConvert<T>,
 {
