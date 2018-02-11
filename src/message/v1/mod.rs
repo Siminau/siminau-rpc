@@ -32,6 +32,7 @@ use core::{CodeConvert, CodeValueError};
 // pub use self::responsebuilder::{response, BuildResponseError, ResponseBuilder};
 pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode,
                      OpenModeError};
+use message;
 
 // ===========================================================================
 // Message codes
@@ -218,7 +219,7 @@ pub enum ResponseKind
 // Messages
 // ===========================================================================
 
-#[derive(Debug, FromMessage)]
+#[derive(Debug, FromMessage, FromVersionMessage, AsMessage)]
 pub enum RequestMessage
 {
     // Auth init succeeded
@@ -258,7 +259,7 @@ pub enum RequestMessage
     WStat(request::WStatRequest),
 }
 
-#[derive(Debug, FromMessage)]
+#[derive(Debug, FromMessage, FromVersionMessage, AsMessage)]
 pub enum ResponseMessage
 {
     // Auth init succeeded
