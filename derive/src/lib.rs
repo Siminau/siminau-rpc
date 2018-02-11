@@ -28,6 +28,7 @@ extern crate syn;
 mod codeconvert;
 mod datakind;
 mod from_message;
+mod from_version_message;
 
 // ===========================================================================
 // Imports
@@ -43,6 +44,7 @@ use syn::DeriveInput;
 use codeconvert::impl_code_convert;
 use datakind::impl_is_datakind;
 use from_message::impl_from_message;
+use from_version_message::impl_from_version_message;
 
 // ===========================================================================
 // Helper
@@ -90,6 +92,17 @@ pub fn code_convert(input: TokenStream) -> TokenStream
 pub fn from_message(input: TokenStream) -> TokenStream
 {
     build_derive(input, impl_from_message)
+}
+
+// ===========================================================================
+// FromVersionMessage
+// ===========================================================================
+
+// This depends on simianu_rpc::message being available
+#[proc_macro_derive(FromVersionMessage)]
+pub fn from_version_message(input: TokenStream) -> TokenStream
+{
+    build_derive(input, impl_from_version_message)
 }
 
 // ===========================================================================
