@@ -25,6 +25,7 @@ extern crate syn;
 // Modules
 // ===========================================================================
 
+mod as_message;
 mod codeconvert;
 mod datakind;
 mod from_message;
@@ -41,6 +42,7 @@ use proc_macro::TokenStream;
 use syn::DeriveInput;
 
 // Local imports
+use as_message::impl_as_message;
 use codeconvert::impl_code_convert;
 use datakind::impl_is_datakind;
 use from_message::impl_from_message;
@@ -105,6 +107,16 @@ pub fn from_message(input: TokenStream) -> TokenStream
 pub fn from_version_message(input: TokenStream) -> TokenStream
 {
     build_derive(input, impl_from_version_message)
+}
+
+// ===========================================================================
+// AsMessage
+// ===========================================================================
+
+#[proc_macro_derive(AsMessage)]
+pub fn as_message(input: TokenStream) -> TokenStream
+{
+    build_derive(input, impl_as_message)
 }
 
 // ===========================================================================
