@@ -46,8 +46,6 @@ pub struct FileID
 pub struct InitResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub version: u32,
 }
 
@@ -66,8 +64,6 @@ pub struct InitResponse
 pub struct ErrorResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub error_msg: String,
 }
 
@@ -86,8 +82,6 @@ pub struct ErrorResponse
 pub struct AuthResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub server_id: FileID,
 }
 
@@ -104,8 +98,6 @@ pub struct AuthResponse
 pub struct FlushResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
 }
 
 // --------------------
@@ -123,8 +115,6 @@ pub struct FlushResponse
 pub struct AttachResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub rootdir_id: FileID,
 }
 
@@ -143,8 +133,6 @@ pub struct AttachResponse
 pub struct WalkResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub path_id: Vec<FileID>,
 }
 
@@ -172,8 +160,6 @@ pub struct OpenCreateData
 pub struct OpenResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: OpenCreateData,
 }
 
@@ -194,8 +180,6 @@ pub struct OpenResponse
 pub struct CreateResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: OpenCreateData,
 }
 
@@ -222,8 +206,6 @@ pub struct ReadData
 pub struct ReadResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: ReadData,
 }
 
@@ -242,8 +224,6 @@ pub struct ReadResponse
 pub struct WriteResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub count: u32,
 }
 
@@ -261,8 +241,6 @@ pub struct WriteResponse
 pub struct ClunkResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
 }
 
 // --------------------
@@ -279,8 +257,6 @@ pub struct ClunkResponse
 pub struct RemoveResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
 }
 
 // --------------------
@@ -337,8 +313,6 @@ pub struct StatData
 pub struct StatResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub stat: StatData,
 }
 
@@ -356,8 +330,6 @@ pub struct StatResponse
 pub struct WStatResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
 }
 
 // ===========================================================================

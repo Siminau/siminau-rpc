@@ -10,11 +10,11 @@
 // Stdlib imports
 
 // Third-party imports
-
-// use rmpv::Value;
+// use byteorder::{NetworkEndian, WriteBytesExt};
+use bytes::{BufMut, Bytes, BytesMut};
+use serde::{Serialize, Serializer};
 
 // Local imports
-
 use core::{CodeConvert, CodeValueError};
 // use core::notify::NotificationMessage;
 // use core::request::{RequestMessage, RpcRequest};
@@ -25,6 +25,85 @@ use core::{CodeConvert, CodeValueError};
 // ===========================================================================
 
 pub mod v1;
+
+// ===========================================================================
+// Message envelope
+// ===========================================================================
+
+#[derive(Debug)]
+pub struct Header
+{
+    pub category: u8,
+    pub kind: u8,
+}
+
+impl Header
+{
+    pub fn from_bytes(b: &Bytes) -> Header
+    {
+        let slice = &b[..2];
+        Header {
+            category: slice[0],
+            kind: slice[1],
+        }
+    }
+
+    pub fn as_bytes(&self) -> Bytes
+    {
+        let mut buf = BytesMut::new();
+        buf.put_u8(self.category);
+        buf.put_u8(self.kind);
+        buf.freeze()
+    }
+}
+
+// Data will be bytes that will need to be deserialized to a
+// Request/Response/Notification struct
+#[derive(Debug)]
+pub struct Envelope<D>
+where
+    D: Serialize,
+{
+    pub header: Header,
+    pub data: D,
+}
+
+impl<D> Envelope<D>
+where
+    D: Serialize,
+{
+    pub fn from(header: Header, data: D) -> Envelope<D>
+    {
+        Envelope { header, data }
+    }
+
+    pub fn as_bytes<F, S>(&self, ser: F) -> Bytes
+    where
+        F: Fn(&mut Vec<u8>) -> S,
+        S: Serializer,
+    {
+        // Serialize data into bytes
+        let mut databuf = Vec::new();
+        (&self.data).serialize(ser(&mut databuf)).unwrap();
+
+        // Serialize header into bytes
+        let header = &self.header;
+        let mut buf = BytesMut::new();
+        buf.put_u8(header.category);
+        buf.put_u8(header.kind);
+
+        // Add data bytes
+        buf.extend_from_slice(&databuf[..]);
+        buf.freeze()
+    }
+
+    pub fn header_bytes<B>(buf: B) -> Bytes
+    where
+        B: AsRef<[u8]>,
+    {
+        Bytes::from(&buf.as_ref()[..2])
+    }
+}
 
 // ===========================================================================
 // MessageKind
@@ -111,15 +190,10 @@ pub enum NotifyKind
 //
 // Single argument:
 // 1. protocol message version number
-//
-// category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct VersionRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub version: u32,
 }
 
@@ -135,15 +209,10 @@ pub struct VersionRequest
 //
 // Single argument:
 // 1. protocol message version number that will be used
-//
-// category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct VersionResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub version: u32,
 }
 
@@ -159,8 +228,6 @@ pub struct VersionResponse
 pub struct ErrorResponse
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub error_msg: String,
 }
 
@@ -168,14 +235,14 @@ pub struct ErrorResponse
 // Message enum
 // ===========================================================================
 
-#[derive(Debug, FromMessage, AsMessage)]
+#[derive(Debug, FromMessage, AsMessage, Serialize, Deserialize)]
 pub enum RequestMessage
 {
     VersionRequest(VersionRequest),
     V1(v1::RequestMessage),
 }
 
-#[derive(Debug, FromMessage, AsMessage)]
+#[derive(Debug, FromMessage, AsMessage, Serialize, Deserialize)]
 pub enum ResponseMessage
 {
     VersionResponse(VersionResponse),

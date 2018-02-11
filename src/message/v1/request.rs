@@ -23,8 +23,6 @@
 pub struct InitRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub version: u32,
 }
 
@@ -53,8 +51,6 @@ pub struct AuthData
 pub struct AuthRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: AuthData,
 }
 
@@ -73,8 +69,6 @@ pub struct AuthRequest
 pub struct FlushRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub message_id: u32,
 }
 
@@ -108,8 +102,6 @@ pub struct AttachData
 pub struct AttachRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: AttachData,
 }
 
@@ -138,8 +130,6 @@ pub struct WalkData
 pub struct WalkRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: WalkData,
 }
 
@@ -168,8 +158,6 @@ pub struct OpenData
 pub struct OpenRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: OpenData,
 }
 
@@ -200,8 +188,6 @@ pub struct CreateData
 pub struct CreateRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: CreateData,
 }
 
@@ -230,8 +216,6 @@ pub struct ReadData
 pub struct ReadRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: ReadData,
 }
 
@@ -262,8 +246,6 @@ pub struct WriteData
 pub struct WriteRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: WriteData,
 }
 
@@ -302,8 +284,6 @@ pub struct ClunkRequest
 pub struct RemoveRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub file_id: u32,
 }
 
@@ -322,8 +302,6 @@ pub struct RemoveRequest
 pub struct StatRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub file_id: u32,
 }
 
@@ -366,8 +344,6 @@ pub struct WStatData
 pub struct WStatRequest
 {
     pub id: u32,
-    pub category: u8,
-    pub kind: u8,
     pub args: WStatData,
 }
 
