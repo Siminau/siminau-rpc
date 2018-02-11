@@ -41,7 +41,7 @@ pub struct FileID
 // 1. Protocol version number that will be used
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InitResponse
 {
@@ -61,7 +61,7 @@ pub struct InitResponse
 // 1. error message string
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ErrorResponse
 {
@@ -81,7 +81,7 @@ pub struct ErrorResponse
 // 1. Unique server identifier for the auth file
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthResponse
 {
@@ -99,7 +99,7 @@ pub struct AuthResponse
 // No arguments
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FlushResponse
 {
@@ -118,7 +118,7 @@ pub struct FlushResponse
 // 1. Unique server identifier for the root directory
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachResponse
 {
@@ -138,7 +138,7 @@ pub struct AttachResponse
 //    the request
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WalkResponse
 {
@@ -167,7 +167,7 @@ pub struct OpenCreateData
 //    file without a separate message. May be 0 which means no limit.
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OpenResponse
 {
@@ -189,7 +189,7 @@ pub struct OpenResponse
 //    file without a separate message. May be 0 which means no limit.
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CreateResponse
 {
@@ -217,7 +217,7 @@ pub struct ReadData
 // 2. List of bytes read from the file
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ReadResponse
 {
@@ -237,7 +237,7 @@ pub struct ReadResponse
 // 1. Number of bytes written to the file
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WriteResponse
 {
@@ -256,7 +256,7 @@ pub struct WriteResponse
 // No arguments
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClunkResponse
 {
@@ -274,7 +274,7 @@ pub struct ClunkResponse
 // No arguments
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RemoveResponse
 {
@@ -332,7 +332,7 @@ pub struct StatData
 // 1. map of file attributes
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StatResponse
 {
@@ -351,7 +351,7 @@ pub struct StatResponse
 // No arguments
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::ResponseCode type
+// kind field should be used as a message::ResponseKind type
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WStatResponse
 {

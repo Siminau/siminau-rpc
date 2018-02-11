@@ -215,6 +215,90 @@ pub enum ResponseKind
 }
 
 // ===========================================================================
+// Messages
+// ===========================================================================
+
+#[derive(Debug)]
+pub enum RequestMessage
+{
+    // Auth init succeeded
+    Auth(request::AuthRequest),
+
+    // Flush request succeeded
+    Flush(request::FlushRequest),
+
+    // Attach request succeeded
+    Attach(request::AttachRequest),
+
+    // Walk request succeded
+    Walk(request::WalkRequest),
+
+    // Open request succeeded
+    Open(request::OpenRequest),
+
+    // Create request succeeded
+    Create(request::CreateRequest),
+
+    // Read request succeeded
+    Read(request::ReadRequest),
+
+    // Write request succeeded
+    Write(request::WriteRequest),
+
+    // Clunk request succeeded
+    Clunk(request::ClunkRequest),
+
+    // Remove request succeeded
+    Remove(request::RemoveRequest),
+
+    // Stat request succeeded
+    Stat(request::StatRequest),
+
+    // Write stat request succeeded
+    WStat(request::WStatRequest),
+}
+
+#[derive(Debug)]
+pub enum ResponseMessage
+{
+    // Auth init succeeded
+    Auth(response::AuthResponse),
+
+    // Flush response succeeded
+    Flush(response::FlushResponse),
+
+    // Attach response succeeded
+    Attach(response::AttachResponse),
+
+    // Walk response succeded
+    Walk(response::WalkResponse),
+
+    // Open response succeeded
+    Open(response::OpenResponse),
+
+    // Create response succeeded
+    Create(response::CreateResponse),
+
+    // Read response succeeded
+    Read(response::ReadResponse),
+
+    // Write response succeeded
+    Write(response::WriteResponse),
+
+    // Clunk response succeeded
+    Clunk(response::ClunkResponse),
+
+    // Remove response succeeded
+    Remove(response::RemoveResponse),
+
+    // Stat response succeeded
+    Stat(response::StatResponse),
+
+    // Write stat response succeeded
+    WStat(response::WStatResponse),
+}
+
+// ===========================================================================
 // New types
 // ===========================================================================
 
