@@ -1,4 +1,4 @@
-// /home/smokybobo/src/me/siminau/siminau-rpc/src/message/v1/response.rs
+// src/message/v1/response.rs
 // Copyright (C) 2018 authors and contributors (see AUTHORS file)
 //
 // This file is released under the MIT License.
@@ -16,10 +16,6 @@
 // ===========================================================================
 //
 // ===========================================================================
-
-// Write stat request succeeded
-//
-// No arguments
 
 // --------------------
 // General
@@ -49,10 +45,10 @@ pub struct FileID
 #[derive(Debug, Deserialize, Serialize)]
 pub struct InitResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    version: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub version: u32,
 }
 
 // --------------------
@@ -69,10 +65,10 @@ pub struct InitResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ErrorResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    error_msg: String,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub error_msg: String,
 }
 
 // --------------------
@@ -89,10 +85,10 @@ pub struct ErrorResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuthResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    server_id: FileID,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub server_id: FileID,
 }
 
 // --------------------
@@ -107,9 +103,9 @@ pub struct AuthResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FlushResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
 }
 
 // --------------------
@@ -126,10 +122,10 @@ pub struct FlushResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttachResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    rootdir_id: FileID,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub rootdir_id: FileID,
 }
 
 // --------------------
@@ -146,10 +142,10 @@ pub struct AttachResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WalkResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    path_id: Vec<FileID>,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub path_id: Vec<FileID>,
 }
 
 // --------------------
@@ -159,8 +155,8 @@ pub struct WalkResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OpenCreateData
 {
-    file_id: FileID,
-    max_size: u32,
+    pub file_id: FileID,
+    pub max_size: u32,
 }
 
 // Open request succeeded
@@ -175,10 +171,10 @@ pub struct OpenCreateData
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OpenResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: OpenCreateData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: OpenCreateData,
 }
 
 // --------------------
@@ -197,20 +193,21 @@ pub struct OpenResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CreateResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: OpenCreateData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: OpenCreateData,
 }
 
 // --------------------
 // read
 // --------------------
 
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ReadData
 {
-    count: u32,
-    data: Vec<u8>,
+    countpub: u32,
+    pub data: Vec<u8>,
 }
 
 // Read request succeeded
@@ -224,10 +221,10 @@ pub struct ReadData
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ReadResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: ReadData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: ReadData,
 }
 
 // --------------------
@@ -244,10 +241,10 @@ pub struct ReadResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WriteResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    count: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub count: u32,
 }
 
 // --------------------
@@ -263,9 +260,9 @@ pub struct WriteResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClunkResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
 }
 
 // --------------------
@@ -281,14 +278,53 @@ pub struct ClunkResponse
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RemoveResponse
 {
-    id: u32,
-    category: u8,
-    kind: u8,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
 }
 
 // --------------------
 // stat
 // --------------------
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StatData
+{
+    // Total byte count of all fields except for size
+    pub size: u16,
+
+    pub fileid: FileID,
+
+    // File attributes and permissions
+    // The high 8 bits are a copy of FileKind, and the other 24 bits are for
+    // permissions
+    pub mode: u32,
+
+    // last access time
+    // date field
+    // this should be a rfc3339 compliant string
+    pub atime: String,
+
+    // last modified time
+    // date field
+    // this should be a rfc3339 compliant string
+    pub mtime: String,
+
+    // length of file in bytes
+    pub length: u64,
+
+    // File name
+    pub name: String,
+
+    // Owner name
+    pub uid: String,
+
+    // Group name
+    pub gid: String,
+
+    // name of the user who last modified the file
+    pub muid: String,
+}
 
 // Stat request succeeded
 //
@@ -297,6 +333,32 @@ pub struct RemoveResponse
 //
 // category field should be used as a core::new::MessageCategory type
 // kind field should be used as a message::ResponseCode type
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StatResponse
+{
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub stat: StatData,
+}
+
+// --------------------
+// wstat
+// --------------------
+
+// Write stat request succeeded
+//
+// No arguments
+//
+// category field should be used as a core::new::MessageCategory type
+// kind field should be used as a message::ResponseCode type
+#[derive(Debug, Deserialize, Serialize)]
+pub struct WStatResponse
+{
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+}
 
 // ===========================================================================
 //

@@ -18,14 +18,14 @@
 // ===========================================================================
 
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::RequestCode type
+// kind field should be used as a message::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct InitRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    version: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub version: u32,
 }
 
 // --------------------
@@ -35,9 +35,9 @@ pub struct InitRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct AuthData
 {
-    authfile_id: u32,
-    username: String,
-    fsname: String,
+    pub authfile_id: u32,
+    pub username: String,
+    pub fsname: String,
 }
 
 // Setup client authentication file.
@@ -48,14 +48,14 @@ pub struct AuthData
 // 3. service name
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct AuthRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: AuthData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: AuthData,
 }
 
 // --------------------
@@ -68,14 +68,14 @@ pub struct AuthRequest
 // 1. message id of the previous request
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct FlushRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    message_id: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub message_id: u32,
 }
 
 // --------------------
@@ -85,10 +85,10 @@ pub struct FlushRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct AttachData
 {
-    rootdir_id: u32,
-    authfile_id: u32,
-    username: String,
-    fsname: String,
+    pub rootdir_id: u32,
+    pub authfile_id: u32,
+    pub username: String,
+    pub fsname: String,
 }
 
 // Attach to the root directory of a given service.
@@ -103,14 +103,14 @@ pub struct AttachData
 // 4. service name
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct AttachRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: AttachData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: AttachData,
 }
 
 // --------------------
@@ -120,9 +120,9 @@ pub struct AttachRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct WalkData
 {
-    file_id: u32,
-    newfile_id: u32,
-    path: Vec<String>,
+    pub file_id: u32,
+    pub newfile_id: u32,
+    pub path: Vec<String>,
 }
 
 // Walk a directory hierarchy
@@ -133,14 +133,14 @@ pub struct WalkData
 // 3. list of path element strings to walk through
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct WalkRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: WalkData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: WalkData,
 }
 
 // --------------------
@@ -152,8 +152,8 @@ pub struct WalkRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct OpenData
 {
-    file_id: u32,
-    mode: u8,
+    pub file_id: u32,
+    pub mode: u8,
 }
 
 // Prepare an existing file id for I/O
@@ -163,14 +163,14 @@ pub struct OpenData
 // 2. mode ie type of I/O
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct OpenRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: OpenData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: OpenData,
 }
 
 // --------------------
@@ -182,9 +182,9 @@ pub struct OpenRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CreateData
 {
-    file_id: u32,
-    filename: String,
-    mode: u8,
+    pub file_id: u32,
+    pub filename: String,
+    pub mode: u8,
 }
 
 // Create a file and open it for I/O
@@ -195,14 +195,14 @@ pub struct CreateData
 // 3. mode ie type of I/O
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct CreateRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: CreateData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: CreateData,
 }
 
 // --------------------
@@ -212,9 +212,9 @@ pub struct CreateRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct ReadData
 {
-    file_id: u32,
-    offset: u64,
-    count: u32,
+    pub file_id: u32,
+    pub offset: u64,
+    pub count: u32,
 }
 
 // Request for a number of bytes from a file
@@ -225,14 +225,14 @@ pub struct ReadData
 // 3. number of bytes to return
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct ReadRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: ReadData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: ReadData,
 }
 
 // --------------------
@@ -242,10 +242,10 @@ pub struct ReadRequest
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct WriteData
 {
-    file_id: u32,
-    offset: u64,
-    count: u32,
-    data: Vec<u8>,
+    pub file_id: u32,
+    pub offset: u64,
+    pub count: u32,
+    pub data: Vec<u8>,
 }
 
 // Request that a number of bytes be recorded to a file
@@ -257,14 +257,14 @@ pub struct WriteData
 // 4. list of bytes
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct WriteRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: WriteData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: WriteData,
 }
 
 // --------------------
@@ -277,14 +277,14 @@ pub struct WriteRequest
 // 1. existing file id
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct ClunkRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    file_id: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub file_id: u32,
 }
 
 // --------------------
@@ -297,14 +297,14 @@ pub struct ClunkRequest
 // 1. existing file id
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct RemoveRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    file_id: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub file_id: u32,
 }
 
 // --------------------
@@ -317,14 +317,14 @@ pub struct RemoveRequest
 // 1. existing file id
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct StatRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    file_id: u32,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub file_id: u32,
 }
 
 // --------------------
@@ -341,7 +341,8 @@ pub struct WStatData
 
     // last modified time
     // date field
-    pub mtime: u32,
+    // this should be a rfc3339 compliant string
+    pub mtime: String,
 
     // length of file in bytes
     pub length: u64,
@@ -360,14 +361,14 @@ pub struct WStatData
 // 2. map of new file attributes to save to the file
 //
 // category field should be used as a core::new::MessageCategory type
-// kind field should be used as a message::v1::RequestCode type
+// kind field should be used as a message::v1::RequestKind type
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct WStatRequest
 {
-    id: u32,
-    category: u8,
-    kind: u8,
-    args: WStatData,
+    pub id: u32,
+    pub category: u8,
+    pub kind: u8,
+    pub args: WStatData,
 }
 
 // ===========================================================================

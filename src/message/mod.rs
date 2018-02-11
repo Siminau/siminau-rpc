@@ -35,7 +35,7 @@ pub mod v1;
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum RequestCode
+pub enum AllRequestKind
 {
     // Initiate client session by requesting an API version
     //
@@ -47,8 +47,8 @@ pub enum RequestCode
 #[derive(Debug)]
 pub enum RequestKind
 {
-    General(RequestCode),
-    V1(v1::RequestCode),
+    All(AllRequestKind),
+    V1(v1::RequestKind),
 }
 
 // --------------------
@@ -56,7 +56,7 @@ pub enum RequestKind
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum ResponseCode
+pub enum AllResponseKind
 {
     // Any error that is generated in response to a request.
     //
@@ -75,8 +75,8 @@ pub enum ResponseCode
 #[derive(Debug)]
 pub enum ResponseKind
 {
-    General(ResponseCode),
-    V1(v1::ResponseCode),
+    All(AllResponseKind),
+    V1(v1::ResponseKind),
 }
 
 // --------------------

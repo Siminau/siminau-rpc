@@ -14,7 +14,9 @@ use failure::Fail;
 use rmps::decode;
 
 // Local imports
-use core::new::FromBytesError;
+use core::new::{CodeConvert, DataKind, FromBytesError, Message,
+                MessageCategory};
+use message::v1::request;
 
 // ===========================================================================
 // Message conversion trait implementations
@@ -59,10 +61,35 @@ where
 }
 
 // ===========================================================================
-// Request
+// InitRequest
 // ===========================================================================
 
-pub struct Request;
+pub struct InitRequest
+{
+    inner: request::InitRequest,
+}
+
+impl<T> Message<T> for InitRequest
+where
+    T: CodeConvert<T>,
+{
+    fn category(&self) -> MessageCategory
+    {
+        MessageCategory::from_number(self.inner.category).unwrap()
+    }
+
+    /// Return the message's kind
+    fn kind(&self) -> T
+    {
+        unimplemented!();
+    }
+
+    /// Return the message's data payload
+    fn data(&self) -> DataKind
+    {
+        unimplemented!();
+    }
+}
 
 // ===========================================================================
 //

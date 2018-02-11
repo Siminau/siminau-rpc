@@ -7,9 +7,10 @@
 // Modules
 // ===========================================================================
 
-mod request;
-mod requestbuilder;
-mod responsebuilder;
+pub mod request;
+pub mod response;
+// mod requestbuilder;
+// mod responsebuilder;
 mod util;
 
 // ===========================================================================
@@ -23,12 +24,12 @@ mod util;
 // Local imports
 
 use core::{CodeConvert, CodeValueError};
-use core::request::RequestMessage;
-use core::response::ResponseMessage;
+// use core::request::RequestMessage;
+// use core::response::ResponseMessage;
 
 // Re-exports
-pub use self::requestbuilder::{request, BuildRequestError, RequestBuilder};
-pub use self::responsebuilder::{response, BuildResponseError, ResponseBuilder};
+// pub use self::requestbuilder::{request, BuildRequestError, RequestBuilder};
+// pub use self::responsebuilder::{response, BuildResponseError, ResponseBuilder};
 pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode,
                      OpenModeError};
 
@@ -37,7 +38,7 @@ pub use self::util::{openmode, FileID, FileKind, OpenFlag, OpenKind, OpenMode,
 // ===========================================================================
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum RequestCode
+pub enum RequestKind
 {
     // Setup client authentication file.
     //
@@ -136,7 +137,7 @@ pub enum RequestCode
 // --------------------
 
 #[derive(Debug, PartialEq, Clone, CodeConvert)]
-pub enum ResponseCode
+pub enum ResponseKind
 {
     // Auth init succeeded
     //
@@ -217,9 +218,9 @@ pub enum ResponseCode
 // New types
 // ===========================================================================
 
-pub type Request = RequestMessage<RequestCode>;
+// pub type Request = RequestMessage<RequestCode>;
 
-pub type Response = ResponseMessage<ResponseCode>;
+// pub type Response = ResponseMessage<ResponseCode>;
 
 // ===========================================================================
 //
