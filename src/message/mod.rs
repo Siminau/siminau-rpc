@@ -15,7 +15,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Serialize, Serializer};
 
 // Local imports
-use core::{CodeConvert, CodeValueError};
+use core::new::{CodeConvert, CodeValueError, MessageCategory};
 // use core::notify::NotificationMessage;
 // use core::request::{RequestMessage, RpcRequest};
 // use core::response::ResponseMessage;
@@ -54,6 +54,78 @@ impl Header
         buf.put_u8(self.category);
         buf.put_u8(self.kind);
         buf.freeze()
+    }
+
+    pub fn as_msgcat(&self) -> Option<MessageCategory>
+    {
+        let cat = MessageCategory::from_number(self.category);
+        match cat {
+            Ok(c) => Some(c),
+            Err(_) => None,
+        }
+    }
+
+    fn as_reqkind(&self) -> Option<RequestKind>
+    {
+        let allkind = AllRequestKind::from_number(self.kind);
+        if let Ok(kind) = allkind {
+            return Some(RequestKind::All(kind));
+        }
+
+        let v1kind = v1::RequestKind::from_number(self.kind);
+        if let Ok(kind) = v1kind {
+            return Some(RequestKind::V1(kind));
+        }
+
+        None
+    }
+
+    fn as_respkind(&self) -> Option<ResponseKind>
+    {
+        let allkind = AllResponseKind::from_number(self.kind);
+        if let Ok(kind) = allkind {
+            return Some(ResponseKind::All(kind));
+        }
+
+        let v1kind = v1::ResponseKind::from_number(self.kind);
+        if let Ok(kind) = v1kind {
+            return Some(ResponseKind::V1(kind));
+        }
+
+        None
+    }
+
+    fn as_notifykind(&self) -> Option<NotifyKind>
+    {
+        let allkind = AllNotifyKind::from_number(self.kind);
+        if let Ok(kind) = allkind {
+            return Some(NotifyKind::All(kind));
+        }
+
+        None
+    }
+
+    pub fn as_msgkind(&self) -> Option<MessageKind>
+    {
+        let cat = match self.as_msgcat() {
+            None => return None,
+            Some(c) => c,
+        };
+
+        match cat {
+            MessageCategory::Request => match self.as_reqkind() {
+                Some(kind) => Some(MessageKind::Request(kind)),
+                None => None,
+            },
+            MessageCategory::Response => match self.as_respkind() {
+                Some(kind) => Some(MessageKind::Response(kind)),
+                None => None,
+            },
+            MessageCategory::Notification => match self.as_notifykind() {
+                Some(kind) => Some(MessageKind::Notification(kind)),
+                None => None,
+            },
+        }
     }
 }
 
@@ -108,6 +180,14 @@ where
 // ===========================================================================
 // MessageKind
 // ===========================================================================
+
+#[derive(Debug)]
+pub enum MessageKind
+{
+    Request(RequestKind),
+    Response(ResponseKind),
+    Notification(NotifyKind),
+}
 
 // --------------------
 // Requests
